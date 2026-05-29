@@ -20,6 +20,7 @@ build/
 # Dados brutos — baixar via script
 data/kaggle/*.csv
 data/kaggle/*.parquet
+data/kaggle/*.zip
 data/processed/*.csv
 data/processed/*.parquet
 data/synthetic_enrichment/offer_events.jsonl
