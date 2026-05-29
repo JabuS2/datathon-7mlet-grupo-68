@@ -1,0 +1,16 @@
+node_modules/
+__pycache__/
+*.py[cod]
+.env
+.env.local
+mlruns/
+data/kaggle/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.git/
+*.egg-info/
+dist/
+build/

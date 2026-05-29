@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.log
+dist/
+build/
+*.egg-info/
+
+# Env — nunca versionar valores reais
+.env
+*.env.local
+
+# Dados brutos — baixar via script
+data/kaggle/*.csv
+data/kaggle/*.parquet
+data/processed/*.csv
+data/processed/*.parquet
+data/synthetic_enrichment/offer_events.jsonl
+data/synthetic_enrichment/delayed_rewards.jsonl
+
+# Modelos binários
+*.pkl
+*.pt
+*.onnx
+mlruns/
+
+# Node
+node_modules/
+apps/hp-invest/dist/
+apps/dashboard/dist/
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Notebooks outputs
+notebooks/.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code — config local de permissões
+.claude/settings.local.json
