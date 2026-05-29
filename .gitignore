@@ -23,6 +23,8 @@ data/kaggle/*.parquet
 data/kaggle/*.zip
 data/processed/*.csv
 data/processed/*.parquet
+data/synthetic_enrichment/*.csv
+data/synthetic_enrichment/*.parquet
 data/synthetic_enrichment/offer_events.jsonl
 data/synthetic_enrichment/delayed_rewards.jsonl
 
