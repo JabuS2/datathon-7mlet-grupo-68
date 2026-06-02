@@ -57,9 +57,9 @@ datathon-7mlet-grupo-68/
 │
 ├── data/                           # Camadas de dados (PDF Etapas 1-2)
 │   ├── kaggle/README.md            # Fonte, versão, licença
-│   ├── processed/                  # Dataset sem vazamento temporal
-│   ├── synthetic_enrichment/       # offer_catalog.json, eventos, rewards
-│   ├── golden_set/                 # evaluation_cases.jsonl (20+ casos)
+│   ├── processed/                  # Dataset limpo — 1,35 M linhas × 46 colunas
+│   ├── synthetic_enrichment/       # Dataset BR sintético (col. em PT-BR, renda em BRL)
+│   ├── golden_set/                 # offer_catalog.json · golden_clients.csv · README.md
 │   └── rag_corpus/                 # 10 documentos de política sintética
 │
 ├── docs/                           # Documentação obrigatória (PDF Etapa 8)
@@ -81,6 +81,28 @@ datathon-7mlet-grupo-68/
 ├── pyproject.toml
 └── .env.example
 ```
+
+## Catálogo de ofertas (`data/golden_set/offer_catalog.json`)
+
+Define os 10 braços do MAB com todos os parâmetros necessários para o pipeline:
+
+| Campo | Descrição |
+|---|---|
+| `arm_id` | Identificador único — formato `OFF-{CAT}-{NNN}` |
+| `santander_mapping` | Coluna original Santander + `br_product_column` (nome PT-BR no dataset sintético) |
+| `context_features` | Colunas do dataset BR usadas como contexto no LinUCB/contextual MAB |
+| `eligible_segment.santander_filters` | Filtros em nomes PT-BR (`ind_ativo`, `possui_*_atual`, `idade_min`, etc.) |
+| `thompson_sampling_prior` | Priors Beta calibrados por benchmarks de mercado |
+| `ucb_params` | Fator de exploração e nível de confiança por braço |
+| `synthetic_simulation` | Taxa de conversão base + multiplicadores por segmento sintético |
+| `reward` | Tipo, horizonte de atribuição e estratégia para delayed reward |
+
+O campo `catalog_metadata.br_column_mapping` contém o dicionário completo de renomeação Santander → PT-BR, derivado de `scripts/generate_synthetic_br.py`.
+
+**Distribuição de braços:** 3 crédito · 4 investimento · 3 seguro  
+**Taxas de conversão:** 4% (OFF-CR-003) a 22% (OFF-SEG-003 com evento-gatilho)  
+**Braço cold-start:** OFF-INV-004 — exploração maior, prior não-informativo  
+**Braços sintéticos (sem coluna Santander):** OFF-SEG-001, OFF-SEG-002, OFF-SEG-003
 
 ## Limitações conhecidas
 - Dataset Santander usa granularidade mensal — delayed rewards simulados dentro de cada mês
