@@ -7,7 +7,7 @@ name = "datathon-7mlet-grupo-68"
 version = "0.1.0"
 description = "Plataforma de experimentação adaptativa com Multi-Armed Bandit para recomendação de produtos financeiros (dataset Santander)."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11, <4.0"
 license = { text = "MIT" }
 
 dependencies = [
@@ -29,6 +29,10 @@ dependencies = [
     "alembic (>=1.18.4,<2.0.0)",
     "asyncpg (>=0.31.0,<0.32.0)",
     "psycopg2-binary (>=2.9.12,<3.0.0)",
+    "python-jose[cryptography] (>=3.5.0,<4.0.0)",
+    "passlib[bcrypt] (>=1.7.4,<2.0.0)",
+    "polyfactory (>=3.3.0,<4.0.0)",
+    "argon2-cffi (>=25.1.0,<26.0.0)",
 ]
 
 [project.optional-dependencies]
