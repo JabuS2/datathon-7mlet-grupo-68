@@ -1,5 +1,5 @@
-from db.database import Database
-from settings import settings
+from src.db.database import Database
+from src.settings import settings
 
 
 def get_database() -> Database:
