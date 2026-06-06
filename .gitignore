@@ -17,14 +17,6 @@ build/
 .env
 *.env.local
 
-# Dados brutos — baixar via script
-data/kaggle/*.csv
-data/kaggle/*.parquet
-data/processed/*.csv
-data/processed/*.parquet
-data/synthetic_enrichment/offer_events.jsonl
-data/synthetic_enrichment/delayed_rewards.jsonl
-
 # Modelos binários
 *.pkl
 *.pt
@@ -50,3 +42,11 @@ notebooks/.ipynb_checkpoints/
 
 # Claude Code — config local de permissões
 .claude/settings.local.json
+
+# Dados — arquivos grandes, gerados localmente via scripts
+data/kaggle/*.csv
+data/kaggle/*.zip
+data/processed/*.csv
+data/processed/*.parquet
+data/synthetic_enrichment/*.csv
+data/synthetic_enrichment/*.parquet
