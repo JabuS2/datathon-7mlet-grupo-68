@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Type, TypeVar, cast
+from typing import Any, TypeVar
 
 from polyfactory.exceptions import ParameterException
 from polyfactory.factories import BaseFactory
@@ -11,9 +11,8 @@ from polyfactory.field_meta import FieldMeta
 
 T = TypeVar("T")
 
-FactoryT = Type[BaseFactory]
-
-FactoryKey = tuple[FactoryT, Type[Any]]
+FactoryT = type[BaseFactory]
+FactoryKey = tuple[FactoryT, type[Any]]
 
 
 class FakeFactory:
@@ -23,7 +22,7 @@ class FakeFactory:
     def _create_factory(
         cls,
         factory_class: FactoryT,
-        model: Type[Any],
+        model: type[Any],
     ) -> FactoryT:
         key: FactoryKey = (factory_class, model)
 
@@ -74,7 +73,7 @@ class FakeFactory:
     @classmethod
     def model(
         cls,
-        model: Type[T],
+        model: type[T],
         **kwargs: Any,
     ) -> T:
         factory = cls._create_factory(ModelFactory, model)
@@ -83,7 +82,7 @@ class FakeFactory:
     @classmethod
     def typed_dict(
         cls,
-        model: Type[T],
+        model: type[T],
         **kwargs: Any,
     ) -> T:
         factory = cls._create_factory(TypedDictFactory, model)
@@ -92,7 +91,7 @@ class FakeFactory:
     @classmethod
     def typed_dicts(
         cls,
-        model: Type[T],
+        model: type[T],
         count: int,
         **kwargs: Any,
     ) -> list[T]:
