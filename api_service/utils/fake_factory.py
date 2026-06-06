@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 from datetime import datetime
-from functools import cache
-from typing import Any
+from typing import Any, Type, TypeVar, cast
 
 from polyfactory.exceptions import ParameterException
 from polyfactory.factories import BaseFactory
@@ -8,16 +9,28 @@ from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.factories.typed_dict_factory import TypedDictFactory
 from polyfactory.field_meta import FieldMeta
 
+T = TypeVar("T")
+
+FactoryT = Type[BaseFactory]
+
+FactoryKey = tuple[FactoryT, Type[Any]]
+
 
 class FakeFactory:
+    _cache: dict[FactoryKey, FactoryT] = {}
+
     @classmethod
-    @cache
-    def _create_factory[T](
+    def _create_factory(
         cls,
-        factory_class: type[BaseFactory],
-        model: type[T],
-    ) -> type[BaseFactory]:
-        class Factory(factory_class):
+        factory_class: FactoryT,
+        model: Type[Any],
+    ) -> FactoryT:
+        key: FactoryKey = (factory_class, model)
+
+        if key in cls._cache:
+            return cls._cache[key]
+
+        class Factory(factory_class):  # type: ignore[valid-type, misc]
             __model__ = model
 
             @classmethod
@@ -49,39 +62,37 @@ class FakeFactory:
                     if not isinstance(annotation, type):
                         raise
 
-                    return FakeFactory._create_factory(
+                    nested_factory = FakeFactory._create_factory(
                         factory_class,
                         annotation,
-                    ).build(**kwargs)
+                    )
+                    return nested_factory.build(**kwargs)
 
+        cls._cache[key] = Factory
         return Factory
 
     @classmethod
-    def model[T](
+    def model(
         cls,
-        model: type[T],
+        model: Type[T],
         **kwargs: Any,
     ) -> T:
-        return cls._create_factory(
-            ModelFactory,
-            model,
-        ).build(**kwargs)
+        factory = cls._create_factory(ModelFactory, model)
+        return factory.build(**kwargs)
 
     @classmethod
-    def typed_dict[T](
+    def typed_dict(
         cls,
-        model: type[T],
+        model: Type[T],
         **kwargs: Any,
     ) -> T:
-        return cls._create_factory(
-            TypedDictFactory,
-            model,
-        ).build(**kwargs)
+        factory = cls._create_factory(TypedDictFactory, model)
+        return factory.build(**kwargs)
 
     @classmethod
-    def typed_dicts[T](
+    def typed_dicts(
         cls,
-        model: type[T],
+        model: Type[T],
         count: int,
         **kwargs: Any,
     ) -> list[T]:

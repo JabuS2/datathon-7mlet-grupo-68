@@ -23,7 +23,7 @@ class UserService:
                 hashed_password=self.jwt.hash_password(data.password),
             )
 
-            await self.uow.users.add(user)
+            self.uow.users.add(user)
 
             return UserResponse.model_validate(user)
 

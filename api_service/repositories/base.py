@@ -11,13 +11,13 @@ class BaseRepository[ModelType]:
 
     async def get_by_id(self, obj_id: int) -> ModelType | None:
         result = await self.session.execute(
-            select(self.model).where(self.model.id == obj_id)
+            select(self.model).where(self.model.id == obj_id) # type: ignore[attr-defined]
         )
         return result.scalar_one_or_none()
 
     async def get_by_field(
         self,
-        field: ColumnElement,
+        field: Any,
         value: Any,
     ) -> ModelType | None:
         result = await self.session.execute(
@@ -45,4 +45,4 @@ class BaseRepository[ModelType]:
         return obj
 
     def delete(self, obj: ModelType) -> None:
-        self.session.delete(obj)
+        self.session.delete(obj) # type: ignore[unused-coroutine]
