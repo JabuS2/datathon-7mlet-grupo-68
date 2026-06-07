@@ -1,6 +1,6 @@
 from core.jwt_token import JwtToken
 from db.unit_of_work import UnitOfWork
-from http_exceptions import Conflict
+from http_exceptions import Conflict, Unauthorized
 from models.user import User
 from schemas.token import TokenResponse
 from schemas.user import UserCreate, UserLogin, UserResponse
@@ -35,7 +35,7 @@ class UserService:
                 data.password,
                 user.hashed_password,
             ):
-                raise Conflict("Email ou senha inválidos", code="INVALID_CREDENTIALS")
+                raise Unauthorized("Email ou senha inválidos", code="INVALID_CREDENTIALS")
 
             token = self.jwt.create_access_token({"user_id": user.id})
 

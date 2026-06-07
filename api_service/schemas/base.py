@@ -7,9 +7,10 @@ from utils.fake_factory import FakeFactory
 
 
 class GenericSchema(BaseModel):
-    class Config:
-        validate_by_name = True
-        str_strip_whitespace = True
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        populate_by_name=True,
+    )
 
     @overload
     @classmethod

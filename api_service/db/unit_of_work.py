@@ -9,7 +9,7 @@ class UnitOfWork:
         self._users: UserRepository | None = None
 
     @property
-    def users(self) -> UserRepository:
+    def users(self):
         if self._users is None:
             self._users = UserRepository(self.session)
         return self._users
@@ -22,7 +22,10 @@ class UnitOfWork:
             if exc_type:
                 await self.session.rollback()
             else:
-                await self.session.flush()
-                await self.session.commit()
+                try:
+                    await self.session.commit()
+                except Exception:
+                    await self.session.rollback()
+                    raise
         finally:
-            pass
+            await self.session.close()

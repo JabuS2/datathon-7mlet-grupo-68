@@ -11,7 +11,7 @@ class BaseRepository[ModelType]:
 
     async def get_by_id(self, obj_id: int) -> ModelType | None:
         result = await self.session.execute(
-            select(self.model).where(self.model.id == obj_id) # type: ignore[attr-defined]
+            select(self.model).where(self.model.id == obj_id)  # type: ignore[attr-defined]
         )
         return result.scalar_one_or_none()
 
@@ -20,9 +20,7 @@ class BaseRepository[ModelType]:
         field: Any,
         value: Any,
     ) -> ModelType | None:
-        result = await self.session.execute(
-            select(self.model).where(field == value)
-        )
+        result = await self.session.execute(select(self.model).where(field == value))
         return result.scalar_one_or_none()
 
     async def exists(self, field: ColumnElement, value: Any) -> bool:
@@ -31,9 +29,7 @@ class BaseRepository[ModelType]:
         return bool(result)
 
     async def filter(self, *criteria) -> list[ModelType]:
-        result = await self.session.execute(
-            select(self.model).where(*criteria)
-        )
+        result = await self.session.execute(select(self.model).where(*criteria))
         return list(result.scalars().all())
 
     async def get_all(self) -> list[ModelType]:
@@ -45,4 +41,4 @@ class BaseRepository[ModelType]:
         return obj
 
     def delete(self, obj: ModelType) -> None:
-        self.session.delete(obj) # type: ignore[unused-coroutine]
+        self.session.delete(obj)  # type: ignore[unused-coroutine]

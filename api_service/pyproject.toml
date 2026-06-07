@@ -9,34 +9,33 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "^3.12"
 
-# API core
 fastapi = "^0.115.0"
 uvicorn = { version = "^0.30.0", extras = ["standard"] }
 
-# DB / ORM
 sqlalchemy = "^2.0.35"
 alembic = "^1.13.3"
 
 asyncpg = "^0.29.0"
 psycopg = { version = "^3.2.0", extras = ["binary"] }
+psycopg2-binary = "^2.9.12"
 
-# Auth / Security
-python-jose = { version = "^3.4.0", extras = ["cryptography"] }
-passlib = { version = "^1.7.4", extras = ["bcrypt"] }
+PyJWT = { version = "^2.9.0", extras = ["crypto"] }
+argon2-cffi = "^25.1.0"
 
-# Config
 pydantic = "^2.9.0"
 pydantic-settings = "^2.4.0"
 python-dotenv = "^1.0.1"
-psycopg2-binary = "^2.9.12"
-polyfactory = "^3.3.0"
-argon2-cffi = "^25.1.0"
 
-[tool.poetry.group.dev.dependencies]
+[tool.poetry.group.test.dependencies]
 pytest = "^8.3.0"
-pytest-asyncio = "^0.24.0"
+pytest-asyncio = "^1.4.0"
+pytest-cov = "^7.1.0"
 httpx = "^0.27.0"
 
+polyfactory = "^3.3.0"
+testcontainers = "^4.14.2"
+
+[tool.poetry.group.lint.dependencies]
 ruff = "^0.6.0"
 mypy = "^1.11.0"
 
@@ -45,16 +44,61 @@ target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "SIM",
+    "C4",
+    "RET",
+    "RUF"
+]
 ignore = ["B008"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [tool.mypy]
 python_version = "3.12"
 ignore_missing_imports = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_configs = true
+no_implicit_optional = true
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = """
+-v
+--cov
+--cov-report=term-missing
+--cov-report=xml
+"""
+
+[tool.coverage.run]
+branch = true
+source = [
+    "api",
+    "core",
+    "db",
+    "repositories",
+    "services"
+]
+concurrency = ["thread", "greenlet"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 85
+
+[tool.alembic]
+script_location = "alembic"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.9.0"]
 build-backend = "poetry.core.masonry.api"
