@@ -32,8 +32,7 @@ async def login_user(user: UserLogin, uow: UnitOfWork = Depends(get_uow)):
     jwt = JwtToken()
     service = UserService(uow=uow, jwt=jwt)
 
-    logged_user = await service.login(user)
-    return logged_user
+    return await service.login(user)
 
 
 @router.get("/me", tags=["auth"], response_model=UserResponse, response_model_exclude_none=True)

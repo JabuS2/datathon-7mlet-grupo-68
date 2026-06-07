@@ -1,8 +1,9 @@
 from typing import Annotated
 
+import jwt
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import ExpiredSignatureError, JWTError, jwt
+from jwt import ExpiredSignatureError, InvalidTokenError
 
 from db.dependencies import get_uow
 from db.unit_of_work import UnitOfWork
@@ -20,7 +21,7 @@ class AuthService:
             token,
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
-            options={
+            options={  # type: ignore[arg-type]
                 "require_exp": True,
                 "require_iat": True,
                 "require_sub": True,
@@ -65,7 +66,7 @@ class AuthDependencies:
                 message="Token expirado",
             ) from err
 
-        except JWTError as err:
+        except InvalidTokenError as err:
             raise Unauthorized(
                 code="INVALID_TOKEN",
                 message="Token inválido",

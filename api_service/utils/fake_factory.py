@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, TypeVar
+from typing import Any, ClassVar, TypeVar
 
 from polyfactory.exceptions import ParameterException
 from polyfactory.factories import BaseFactory
@@ -16,7 +16,7 @@ FactoryKey = tuple[FactoryT, type[Any]]
 
 
 class FakeFactory:
-    _cache: dict[FactoryKey, FactoryT] = {}
+    _cache: ClassVar[dict[FactoryKey, FactoryT]] = {}
 
     @classmethod
     def _create_factory(
@@ -77,7 +77,7 @@ class FakeFactory:
         **kwargs: Any,
     ) -> T:
         factory = cls._create_factory(ModelFactory, model)
-        return factory.build(**kwargs)
+        return factory.build(**kwargs)  # type: ignore[no-any-return]
 
     @classmethod
     def typed_dict(
@@ -86,7 +86,7 @@ class FakeFactory:
         **kwargs: Any,
     ) -> T:
         factory = cls._create_factory(TypedDictFactory, model)
-        return factory.build(**kwargs)
+        return factory.build(**kwargs)  # type: ignore[no-any-return]
 
     @classmethod
     def typed_dicts(

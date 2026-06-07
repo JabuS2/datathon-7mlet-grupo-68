@@ -14,6 +14,25 @@ jobs:
       run:
         working-directory: api_service
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: api_service_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/api_service_test
+      USE_TESTCONTAINERS: "false"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,5 +62,5 @@ jobs:
       - name: Type check (mypy)
         run: poetry run mypy .
 
-      - name: Tests (pytest)
-        run: poetry run pytest -v
+      - name: Run tests (pytest)
+        run: poetry run pytest -v --disable-warnings --maxfail=1
