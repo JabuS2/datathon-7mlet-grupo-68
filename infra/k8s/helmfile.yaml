@@ -1,0 +1,77 @@
+repositories:
+  - name: bitnami
+    url: https://charts.bitnami.com/bitnami
+  - name: opensearch-project
+    url: https://opensearch-project.github.io/helm-charts
+  - name: neo4j
+    url: https://neo4j.github.io/helm-charts
+  - name: runix
+    url: https://helm.runix.net
+
+helmDefaults:
+  cleanupOnFail: true
+  wait: true
+  timeout: 300
+
+releases:
+  # ── Relational Database ──────────────────────────────────────
+  - name: datathon-postgresql
+    namespace: datathon
+    chart: bitnami/postgresql
+    version: "~15.0"
+    values:
+      - values/postgres.values.yaml
+
+  - name: datathon-pgadmin
+    namespace: datathon
+    chart: runix/pgadmin4
+    version: "~1.0"
+    values:
+      - values/pgadmin.values.yaml
+    needs:
+      - datathon/datathon-postgresql
+
+  # ── Cache / Queue ────────────────────────────────────────────
+  - name: datathon-redis
+    namespace: datathon
+    chart: bitnami/redis
+    version: "~19.0"
+    values:
+      - values/redis.values.yaml
+
+  # ── Search Engine ────────────────────────────────────────────
+  - name: datathon-opensearch
+    namespace: datathon
+    chart: opensearch-project/opensearch
+    version: "~2.0"
+    values:
+      - values/opensearch.values.yaml
+
+  - name: datathon-opensearch-dashboards
+    namespace: datathon
+    chart: opensearch-project/opensearch-dashboards
+    version: "~2.0"
+    values:
+      - values/opensearch-dashboards.values.yaml
+    needs:
+      - datathon/datathon-opensearch
+
+  # ── Graph Database ───────────────────────────────────────────
+  - name: datathon-neo4j
+    namespace: datathon
+    chart: bitnami/neo4j
+    version: "~0.4"
+    values:
+      - values/neo4j.values.yaml
+
+  # ── Application ──────────────────────────────────────────────
+  - name: datathon-api
+    namespace: datathon
+    chart: ./charts/api
+    values:
+      - charts/api/values.yaml
+    needs:
+      - datathon/datathon-postgresql
+      - datathon/datathon-redis
+      - datathon/datathon-opensearch
+      - datathon/datathon-neo4j

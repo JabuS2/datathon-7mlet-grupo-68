@@ -1,0 +1,28 @@
+# opensearch-project/opensearch-dashboards values for local Kubernetes dev
+# https://artifacthub.io/packages/helm/opensearch-project-helm-charts/opensearch-dashboards
+
+replicaCount: 1
+
+opensearchHosts: "https://datathon-opensearch-master:9200"
+
+extraEnvs:
+  - name: OPENSEARCH_USERNAME
+    value: admin
+  - name: OPENSEARCH_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-secret
+        key: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+service:
+  type: NodePort
+  port: 5601
+  nodePort: 30601
