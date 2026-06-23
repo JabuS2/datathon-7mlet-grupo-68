@@ -1,0 +1,39 @@
+# opensearch-project/opensearch values for local Kubernetes dev
+# https://artifacthub.io/packages/helm/opensearch-project-helm-charts/opensearch
+
+clusterName: datathon-opensearch
+nodeGroup: master
+
+# Single-node cluster for local dev
+singleNode: true
+replicas: 1
+
+extraEnvs:
+  - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-secret
+        key: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+
+persistence:
+  enabled: true
+  size: 2Gi
+  storageClass: ""
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+# JVM heap — keep well below memory limit
+opensearchJavaOpts: "-Xms512m -Xmx512m"
+
+service:
+  type: ClusterIP
+  httpPortName: http
+  transportPortName: transport
+  port: 9200
+  transportPort: 9300

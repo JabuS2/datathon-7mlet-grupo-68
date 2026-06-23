@@ -1,0 +1,58 @@
+replicaCount: 1
+
+image:
+  repository: datathon-mab-api
+  tag: latest
+  pullPolicy: Never   # use local image built into the cluster (minikube/kind)
+
+service:
+  type: NodePort
+  port: 8000
+  nodePort: 30800
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: api.datathon.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Non-sensitive config — sensitive values come from Kubernetes Secrets
+config:
+  projectName: "HP Invest API"
+  version: "1.0.0"
+  corsOrigins: '["http://localhost:4200","http://localhost:3000"]'
+  apiPort: "8000"
+  algorithm: "HS256"
+  accessTokenExpireMinutes: "30"
+  redisDb: "0"
+
+# Names of existing Kubernetes Secrets to source env vars from
+secrets:
+  postgres: postgres-secret
+  redis: redis-secret
+  opensearch: opensearch-secret
+  neo4j: neo4j-secret
+  app: app-secret
+
+# Internal service names used to build connection URLs
+connections:
+  postgresHost: datathon-postgresql
+  postgresPort: "5432"
+  redisHost: datathon-redis-master
+  redisPort: "6379"
+  opensearchHost: datathon-opensearch-master
+  opensearchPort: "9200"
+  neo4jHost: datathon-neo4j
+  neo4jBoltPort: "7687"

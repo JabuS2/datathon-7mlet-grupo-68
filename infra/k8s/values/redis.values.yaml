@@ -1,0 +1,28 @@
+# bitnami/redis values for local Kubernetes dev
+# https://artifacthub.io/packages/helm/bitnami/redis
+
+architecture: standalone   # single master, no replicas for local dev
+
+auth:
+  enabled: true
+  existingSecret: redis-secret
+  existingSecretPasswordKey: REDIS_PASSWORD
+
+master:
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+  service:
+    type: ClusterIP
+    ports:
+      redis: 6379

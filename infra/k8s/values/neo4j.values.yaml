@@ -1,0 +1,26 @@
+# bitnami/neo4j values for local Kubernetes dev
+# https://artifacthub.io/packages/helm/bitnami/neo4j
+
+auth:
+  existingSecret: neo4j-secret
+  # bitnami/neo4j defaults to the key 'neo4j-password'; our secret uses NEO4J_PASSWORD
+  existingSecretPasswordKey: NEO4J_PASSWORD
+
+persistence:
+  enabled: true
+  size: 2Gi
+  storageClass: ""
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+service:
+  type: NodePort
+  nodePorts:
+    http: 30474
+    bolt: 30687

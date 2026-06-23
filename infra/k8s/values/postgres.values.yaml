@@ -1,0 +1,29 @@
+# bitnami/postgresql values for local Kubernetes dev
+# https://artifacthub.io/packages/helm/bitnami/postgresql
+
+auth:
+  existingSecret: postgres-secret
+  secretKeys:
+    adminPasswordKey: POSTGRES_PASSWORD
+    userPasswordKey: POSTGRES_PASSWORD
+  username: "postgres"
+  database: "postgres"
+
+primary:
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: ""   # uses cluster default (standard on minikube/kind)
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  service:
+    type: ClusterIP
+    ports:
+      postgresql: 5432

@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "datathon-api.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "datathon-api.labels" . | nindent 4 }}
+data:
+  PROJECT_NAME: {{ .Values.config.projectName | quote }}
+  VERSION: {{ .Values.config.version | quote }}
+  BACKEND_CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
+  API_PORT: {{ .Values.config.apiPort | quote }}
+  ALGORITHM: {{ .Values.config.algorithm | quote }}
+  ACCESS_TOKEN_EXPIRE_MINUTES: {{ .Values.config.accessTokenExpireMinutes | quote }}
+  REDIS_DB: {{ .Values.config.redisDb | quote }}
+
+  # Connection hosts/ports (non-sensitive)
+  POSTGRES_SERVER: {{ .Values.connections.postgresHost | quote }}
+  POSTGRES_PORT: {{ .Values.connections.postgresPort | quote }}
+  REDIS_HOST: {{ .Values.connections.redisHost | quote }}
+  REDIS_PORT: {{ .Values.connections.redisPort | quote }}
+  OPENSEARCH_HOST: {{ .Values.connections.opensearchHost | quote }}
+  OPENSEARCH_PORT: {{ .Values.connections.opensearchPort | quote }}
+  NEO4J_URI: {{ printf "bolt://%s:%s" .Values.connections.neo4jHost .Values.connections.neo4jBoltPort | quote }}

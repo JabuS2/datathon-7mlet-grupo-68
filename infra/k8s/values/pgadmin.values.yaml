@@ -1,0 +1,45 @@
+# runix/pgadmin4 values for local Kubernetes dev
+# https://artifacthub.io/packages/helm/runix/pgadmin4
+
+replicaCount: 1
+
+env:
+  email: ""         # overridden by existing secret
+  password: ""      # overridden by existing secret
+
+existingSecret: app-secret
+secretKeys:
+  pgadminPasswordKey: PGADMIN_DEFAULT_PASSWORD
+
+extraEnvVars:
+  - name: PGADMIN_DEFAULT_EMAIL
+    valueFrom:
+      secretKeyRef:
+        name: app-secret
+        key: PGADMIN_DEFAULT_EMAIL
+
+# Pre-configure the PostgreSQL server connection
+serverDefinitions:
+  enabled: true
+  servers:
+    "1":
+      Name: "datathon-postgres"
+      Group: "Datathon"
+      Host: "datathon-postgresql"
+      Port: 5432
+      Username: "postgres"
+      SSLMode: "prefer"
+      MaintenanceDB: "postgres"
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30050
