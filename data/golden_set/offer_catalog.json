@@ -1,62 +1,23 @@
 {
   "catalog_metadata": {
-    "version": "2.0.0",
-    "description": "Catálogo de ofertas — fonte única de verdade dos 10 braços do MAB (Datathon 7MLET Grupo 68).",
+    "version": "2.0.0-prod",
     "n_arms": 10,
+    "description": "Versão de produção",
     "reward_definition": {
       "type": "composite",
-      "formula": "alpha * (expected_revenue_brl / v_max) + beta * conversion",
+      "formula": "alpha * (expected_revenue_brl / v_max) + beta * click",
       "alpha": 0.6,
       "beta": 0.4,
       "v_max": 7000,
-      "note": "conversion = transição 0→1 da br_product_column (real) ou simulada via synthetic_simulation.",
-      "synthetic_note": "conversao = base_conversion_rate * prod(segment_multipliers ativos) * (1 + sum(context_modulators_k * z_k)), onde z_k e o valor padronizado (z-score) da feature; fator clipado em [0.3, 2.2]; event_trigger sobrepoe a base. Moduladores criam variacao intra-segmento que so um modelo contextual (LinUCB) captura."
+      "note": "click vem do evento real de feedback do front-end (/feedback)."
     },
-    "data_source": {
-      "golden_sample_file": "data/golden_set/golden_clients.csv",
-      "full_dataset_file": "data/synthetic_enrichment/clientes_br_sintetico.csv",
-      "client_id_column": "cod_cliente",
-      "date_column": "data_referencia",
-      "loader_pattern": {
-        "step_1_filter": "eligible_segment.santander_filters",
-        "step_2_context": "context_features",
-        "step_3_reward": "santander_mapping.br_product_column"
-      }
-    },
+    "linucb_note": "exploration_factor é escalado por 0.2 no LinUCB.",
     "filter_conventions": {
       "_atual": "valor atual da coluna binária de produto (ex: possui_cartao_credito_atual: 0)",
-      "_min": "valor mínimo inclusive",
+      "_min": "valor mínimo",
       "_percentil_min": "percentil mínimo da renda",
       "idade_min/max": "faixa etária elegível",
       "sem_sufixo": "igualdade direta"
-    },
-    "br_column_mapping": {
-      "ind_ahor_fin_ult1": "possui_poupanca",
-      "ind_cco_fin_ult1": "possui_conta_corrente",
-      "ind_cno_fin_ult1": "possui_conta_salario",
-      "ind_ctju_fin_ult1": "possui_conta_junior",
-      "ind_ctma_fin_ult1": "possui_conta_corrente_plus",
-      "ind_ctpp_fin_ult1": "possui_conta_premium",
-      "ind_deco_fin_ult1": "possui_cdb_curto_prazo",
-      "ind_deme_fin_ult1": "possui_cdb_medio_prazo",
-      "ind_dela_fin_ult1": "possui_cdb_longo_prazo",
-      "ind_ecue_fin_ult1": "possui_conta_digital",
-      "ind_fond_fin_ult1": "possui_fundo_investimento",
-      "ind_hip_fin_ult1": "possui_financiamento_imovel",
-      "ind_plan_fin_ult1": "possui_previdencia_privada",
-      "ind_pres_fin_ult1": "possui_emprestimo_pessoal",
-      "ind_reca_fin_ult1": "possui_pagamento_tributos",
-      "ind_tjcr_fin_ult1": "possui_cartao_credito",
-      "ind_valo_fin_ult1": "possui_titulos_investimento",
-      "ind_viv_fin_ult1": "possui_financiamento_veiculo",
-      "ind_nomina_ult1": "possui_folha_pagamento",
-      "ind_nom_pens_ult1": "possui_beneficio_previdencia",
-      "ind_recibo_ult1": "possui_debito_automatico",
-      "renta": "renda_estimada_anual_brl",
-      "age": "idade",
-      "antiguedad": "tempo_relacionamento_meses",
-      "ind_actividad_cliente": "ind_ativo",
-      "ind_nuevo": "ind_novo"
     }
   },
   "offers": [
@@ -78,42 +39,14 @@
         "possui_financiamento_imovel"
       ],
       "eligible_segment": {
-        "synthetic_segment": "SEG-CREDITO-ATIVO",
         "santander_filters": {
           "ind_ativo": 1,
           "possui_emprestimo_pessoal_atual": 0,
           "tempo_relacionamento_meses_min": 6
         }
       },
-      "santander_mapping": {
-        "br_product_column": "possui_emprestimo_pessoal"
-      },
-      "thompson_sampling_prior": {
-        "alpha": 2,
-        "beta": 10
-      },
       "ucb_params": {
         "exploration_factor": 1.5
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.17,
-        "segment_multipliers": {
-          "SEG-CREDITO-ATIVO": 1.4,
-          "SEG-VIP": 1.3,
-          "SEG-JOVEM": 1.1
-        },
-        "context_modulators": {
-          "renda_estimada_anual_brl": -0.18,
-          "idade": -0.12
-        }
-      },
-      "reward": {
-        "type": "binary",
-        "horizon_days": 14
-      },
-      "flags": {
-        "is_synthetic": false,
-        "is_cold_start": false
       }
     },
     {
@@ -134,42 +67,14 @@
         "possui_financiamento_imovel"
       ],
       "eligible_segment": {
-        "synthetic_segment": "SEG-SEM-CARTAO",
         "santander_filters": {
           "ind_ativo": 1,
           "possui_cartao_credito_atual": 0,
           "idade_min": 18
         }
       },
-      "santander_mapping": {
-        "br_product_column": "possui_cartao_credito"
-      },
-      "thompson_sampling_prior": {
-        "alpha": 2,
-        "beta": 12
-      },
       "ucb_params": {
         "exploration_factor": 1.5
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.12,
-        "segment_multipliers": {
-          "SEG-SEM-CARTAO": 1.5,
-          "SEG-JOVEM": 1.6,
-          "SEG-VIP": 1.3
-        },
-        "context_modulators": {
-          "renda_estimada_anual_brl": -0.2,
-          "idade": -0.18
-        }
-      },
-      "reward": {
-        "type": "binary",
-        "horizon_days": 7
-      },
-      "flags": {
-        "is_synthetic": false,
-        "is_cold_start": false
       }
     },
     {
@@ -190,7 +95,6 @@
         "possui_financiamento_imovel"
       ],
       "eligible_segment": {
-        "synthetic_segment": "SEG-ALTA-RENDA",
         "santander_filters": {
           "ind_ativo": 1,
           "possui_financiamento_imovel_atual": 0,
@@ -199,35 +103,8 @@
           "idade_max": 60
         }
       },
-      "santander_mapping": {
-        "br_product_column": "possui_financiamento_imovel"
-      },
-      "thompson_sampling_prior": {
-        "alpha": 1,
-        "beta": 12
-      },
       "ucb_params": {
         "exploration_factor": 1.8
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.04,
-        "segment_multipliers": {
-          "SEG-ALTA-RENDA": 1.5,
-          "SEG-VIP": 1.4,
-          "SEG-PROPRIETARIO": 1.3
-        },
-        "context_modulators": {
-          "renda_estimada_anual_brl": 0.25,
-          "idade": 0.08
-        }
-      },
-      "reward": {
-        "type": "binary",
-        "horizon_days": 60
-      },
-      "flags": {
-        "is_synthetic": false,
-        "is_cold_start": false
       }
     },
     {
@@ -248,41 +125,13 @@
         "possui_financiamento_imovel"
       ],
       "eligible_segment": {
-        "synthetic_segment": "SEG-INVESTIDOR-INICIANTE",
         "santander_filters": {
           "ind_ativo": 1,
           "possui_cdb_curto_prazo_atual": 0
         }
       },
-      "santander_mapping": {
-        "br_product_column": "possui_cdb_curto_prazo"
-      },
-      "thompson_sampling_prior": {
-        "alpha": 2,
-        "beta": 11
-      },
       "ucb_params": {
         "exploration_factor": 1.5
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.15,
-        "segment_multipliers": {
-          "SEG-INVESTIDOR-INICIANTE": 1.3,
-          "SEG-JOVEM": 1.5,
-          "SEG-VIP": 1.2
-        },
-        "context_modulators": {
-          "renda_estimada_anual_brl": 0.1,
-          "idade": -0.15
-        }
-      },
-      "reward": {
-        "type": "binary",
-        "horizon_days": 14
-      },
-      "flags": {
-        "is_synthetic": false,
-        "is_cold_start": false
       }
     },
     {
@@ -303,43 +152,14 @@
         "possui_financiamento_imovel"
       ],
       "eligible_segment": {
-        "synthetic_segment": "SEG-POUPADOR",
         "santander_filters": {
           "ind_ativo": 1,
           "possui_cdb_medio_prazo_atual": 0,
           "tempo_relacionamento_meses_min": 12
         }
       },
-      "santander_mapping": {
-        "br_product_column": "possui_cdb_medio_prazo"
-      },
-      "thompson_sampling_prior": {
-        "alpha": 2,
-        "beta": 13
-      },
       "ucb_params": {
         "exploration_factor": 1.5
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.12,
-        "segment_multipliers": {
-          "SEG-POUPADOR": 1.4,
-          "SEG-SENIOR": 1.2,
-          "SEG-ALTA-RENDA": 1.3,
-          "SEG-VIP": 1.2
-        },
-        "context_modulators": {
-          "renda_estimada_anual_brl": 0.18,
-          "idade": 0.12
-        }
-      },
-      "reward": {
-        "type": "binary",
-        "horizon_days": 30
-      },
-      "flags": {
-        "is_synthetic": false,
-        "is_cold_start": false
       }
     },
     {
@@ -360,43 +180,14 @@
         "possui_financiamento_imovel"
       ],
       "eligible_segment": {
-        "synthetic_segment": "SEG-CONTRIBUINTE-IR",
         "santander_filters": {
           "ind_ativo": 1,
           "possui_previdencia_privada_atual": 0,
           "renda_percentil_min": 50
         }
       },
-      "santander_mapping": {
-        "br_product_column": "possui_previdencia_privada"
-      },
-      "thompson_sampling_prior": {
-        "alpha": 1,
-        "beta": 9
-      },
       "ucb_params": {
         "exploration_factor": 1.6
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.1,
-        "segment_multipliers": {
-          "SEG-CONTRIBUINTE-IR": 1.5,
-          "SEG-SENIOR": 1.3,
-          "SEG-ALTA-RENDA": 1.2,
-          "SEG-VIP": 1.2
-        },
-        "context_modulators": {
-          "renda_estimada_anual_brl": 0.22,
-          "idade": 0.2
-        }
-      },
-      "reward": {
-        "type": "binary",
-        "horizon_days": 45
-      },
-      "flags": {
-        "is_synthetic": false,
-        "is_cold_start": false
       }
     },
     {
@@ -417,41 +208,13 @@
         "possui_financiamento_imovel"
       ],
       "eligible_segment": {
-        "synthetic_segment": "SEG-INVESTIDOR-EXPERIENTE",
         "santander_filters": {
           "ind_ativo": 1,
           "possui_fundo_investimento_atual": 0
         }
       },
-      "santander_mapping": {
-        "br_product_column": "possui_fundo_investimento"
-      },
-      "thompson_sampling_prior": {
-        "alpha": 1,
-        "beta": 10
-      },
       "ucb_params": {
         "exploration_factor": 2.2
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.07,
-        "segment_multipliers": {
-          "SEG-INVESTIDOR-EXPERIENTE": 1.8,
-          "SEG-VIP": 1.4,
-          "SEG-ALTA-RENDA": 1.3
-        },
-        "context_modulators": {
-          "renda_estimada_anual_brl": 0.28,
-          "idade": 0.1
-        }
-      },
-      "reward": {
-        "type": "binary",
-        "horizon_days": 30
-      },
-      "flags": {
-        "is_synthetic": false,
-        "is_cold_start": true
       }
     },
     {
@@ -472,42 +235,14 @@
         "possui_financiamento_imovel"
       ],
       "eligible_segment": {
-        "synthetic_segment": "SEG-PERFIL-FAMILIAR",
         "santander_filters": {
           "ind_ativo": 1,
           "idade_min": 25,
           "idade_max": 70
         }
       },
-      "santander_mapping": {
-        "br_product_column": null
-      },
-      "thompson_sampling_prior": {
-        "alpha": 3,
-        "beta": 14
-      },
       "ucb_params": {
         "exploration_factor": 1.4
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.18,
-        "segment_multipliers": {
-          "SEG-PERFIL-FAMILIAR": 1.4,
-          "SEG-SENIOR": 1.2,
-          "SEG-VIP": 1.2
-        },
-        "context_modulators": {
-          "renda_estimada_anual_brl": 0.08,
-          "idade": 0.15
-        }
-      },
-      "reward": {
-        "type": "binary",
-        "horizon_days": 30
-      },
-      "flags": {
-        "is_synthetic": true,
-        "is_cold_start": false
       }
     },
     {
@@ -528,41 +263,13 @@
         "possui_financiamento_imovel"
       ],
       "eligible_segment": {
-        "synthetic_segment": "SEG-PROPRIETARIO",
         "santander_filters": {
           "ind_ativo": 1,
           "possui_financiamento_imovel_atual": 1
         }
       },
-      "santander_mapping": {
-        "br_product_column": null
-      },
-      "thompson_sampling_prior": {
-        "alpha": 1,
-        "beta": 12
-      },
       "ucb_params": {
         "exploration_factor": 1.7
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.06,
-        "segment_multipliers": {
-          "SEG-PROPRIETARIO": 1.6,
-          "SEG-ALTA-RENDA": 1.3,
-          "SEG-VIP": 1.2
-        },
-        "context_modulators": {
-          "renda_estimada_anual_brl": 0.2,
-          "idade": 0.05
-        }
-      },
-      "reward": {
-        "type": "binary",
-        "horizon_days": 30
-      },
-      "flags": {
-        "is_synthetic": true,
-        "is_cold_start": false
       }
     },
     {
@@ -583,44 +290,12 @@
         "possui_financiamento_imovel"
       ],
       "eligible_segment": {
-        "synthetic_segment": "SEG-VIAJANTE-EVENTO",
         "santander_filters": {
           "ind_ativo": 1
         }
       },
-      "santander_mapping": {
-        "br_product_column": null
-      },
-      "thompson_sampling_prior": {
-        "alpha": 1,
-        "beta": 14
-      },
       "ucb_params": {
         "exploration_factor": 1.7
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.06,
-        "segment_multipliers": {
-          "SEG-VIP": 1.3,
-          "SEG-JOVEM": 1.2
-        },
-        "event_trigger": {
-          "column": "evento_viagem_sintetico",
-          "value": 1,
-          "conversion_when_triggered": 0.22
-        },
-        "context_modulators": {
-          "renda_estimada_anual_brl": 0.15,
-          "idade": -0.1
-        }
-      },
-      "reward": {
-        "type": "binary",
-        "horizon_days": 3
-      },
-      "flags": {
-        "is_synthetic": true,
-        "is_cold_start": false
       }
     }
   ]
