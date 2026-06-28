@@ -1,0 +1,100 @@
+<main class="min-h-screen bg-[#f9f9f9] text-[#1b1b1b] flex items-center justify-center p-5">
+  <section
+    class="w-full max-w-[480px] bg-white border border-[#eeeeee] rounded-lg p-8 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
+  >
+    <div class="mb-8 text-center">
+      <h1 class="text-3xl font-semibold text-black mb-2">Criar Conta</h1>
+
+      <p class="text-base text-[#5e5e5e]">Cadastre para acessar a corretora de valores</p>
+    </div>
+
+    <form (submit)="onSubmit($event)" class="space-y-4">
+      <div>
+        <label for="email" class="block mb-2 text-sm font-medium text-[#1b1b1b]">
+          Endereço de Email
+        </label>
+
+        <input
+          id="email"
+          class="w-full p-3 border border-[#dddddd] rounded-md bg-white text-[#1b1b1b] text-base transition focus:outline-none focus:border-black focus:border-[1.5px]"
+          [formField]="registerForm.email"
+          placeholder="john@corretoradevalores.com"
+          type="email"
+        />
+      </div>
+
+      @if (registerForm.email().touched() && registerForm.email().invalid()) {
+        <ul class="text-[#ff003d] text-sm">
+          @for (error of registerForm.email().errors(); track error) {
+            <li>
+              {{ error.message }}
+            </li>
+          }
+        </ul>
+      }
+
+      <div>
+        <label for="password" class="block mb-2 text-sm font-medium text-[#1b1b1b]"> Senha </label>
+
+        <input
+          id="password"
+          class="w-full p-3 border border-[#dddddd] rounded-md bg-white text-[#1b1b1b] text-base transition focus:outline-none focus:border-black focus:border-[1.5px]"
+          [formField]="registerForm.password"
+          placeholder="Insira uma senha"
+          type="password"
+        />
+      </div>
+
+      @if (registerForm.password().touched() && registerForm.password().invalid()) {
+        <div class="text-[#ff003d] text-sm">
+          @for (error of registerForm.password().errors(); track $index) {
+            <p>
+              {{ error.message }}
+            </p>
+          }
+        </div>
+      }
+
+      <div>
+        <label for="confirmPassword" class="block mb-2 text-sm font-medium text-[#1b1b1b]">
+          Confirmar Senha
+        </label>
+
+        <input
+          id="confirmPassword"
+          class="w-full p-3 border border-[#dddddd] rounded-md bg-white text-[#1b1b1b] text-base transition focus:outline-none focus:border-black focus:border-[1.5px]"
+          [formField]="registerForm.confirmPassword"
+          placeholder="Confirmar Senha"
+          type="password"
+        />
+      </div>
+
+      @if (registerForm.confirmPassword().touched() && registerForm.confirmPassword().invalid()) {
+        <div class="text-[#ff003d] text-sm">
+          @for (error of registerForm.confirmPassword().errors(); track $index) {
+            <p>
+              {{ error.message }}
+            </p>
+          }
+        </div>
+      }
+
+      <button
+        type="submit"
+        class="w-full bg-black text-white font-medium py-3 px-6 rounded-lg hover:bg-[#333333] transition mt-6"
+      >
+        Registrar
+      </button>
+    </form>
+
+    <div class="mt-8 text-center text-sm text-[#5e5e5e]">
+      Já tem uma conta?
+
+      <a href="/login" class="text-black font-medium inline-flex items-center gap-1">
+        Voltar para Login
+
+        <span class="material-symbols-outlined text-[8px]"> arrow_forward </span>
+      </a>
+    </div>
+  </section>
+</main>

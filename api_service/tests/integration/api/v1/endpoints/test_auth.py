@@ -81,7 +81,7 @@ async def test_me_endpoint(client):
     assert resp.status_code == status.HTTP_200_OK
 
     me_resp = await client.get(
-        "/me", headers={"Authorization": f"Bearer {resp.json()['access_token']}"}
+        "/me", headers={"Authorization": f"Bearer {resp.json()['accessToken']}"}
     )
     assert me_resp.status_code == status.HTTP_200_OK
 

@@ -7,7 +7,7 @@ on:
     branches: ["**"]
 
 jobs:
-  test:
+  backend-tests:
     runs-on: ubuntu-latest
 
     defaults:
@@ -64,3 +64,36 @@ jobs:
 
       - name: Run tests (pytest)
         run: poetry run pytest -v --disable-warnings --maxfail=1
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: front_service
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: front_service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests with coverage
+        run: npm run test -- --watch=false --code-coverage --browsers=ChromeHeadless
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: front_service/coverage
