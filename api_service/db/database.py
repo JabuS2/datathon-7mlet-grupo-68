@@ -7,7 +7,7 @@ class Database:
     def __init__(self, url: str):
         self._engine = create_async_engine(
             url,
-            echo=True,
+            echo=False,
         )
         self._session_factory = async_sessionmaker(
             bind=self._engine, expire_on_commit=False, class_=AsyncSession

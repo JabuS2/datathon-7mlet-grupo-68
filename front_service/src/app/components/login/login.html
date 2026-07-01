@@ -1,0 +1,110 @@
+<main
+  class="min-h-screen bg-[#f9f9f9] text-[#1b1b1b] flex flex-col items-center justify-center font-sans antialiased px-5"
+>
+  <section class="w-full max-w-[440px]">
+    <div class="text-center mb-8">
+      <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-black">HP Invest</h1>
+      <p class="text-base text-[#5e5e5e] mt-2">Corretora de valores</p>
+    </div>
+
+    <div
+      class="bg-white border border-[#cfc4c5] rounded-xl p-8 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
+    >
+      <form (submit)="onSubmit($event)" class="space-y-4">
+        <div>
+          <label
+            for="email"
+            class="block text-xs font-semibold uppercase tracking-wider text-[#5e5e5e] mb-2"
+          >
+            Email
+          </label>
+
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#7e7576]">
+              <span class="material-symbols-outlined"> person </span>
+            </span>
+
+            <input
+              id="email"
+              type="email"
+              placeholder="Informe seu email"
+              [formField]="loginForm.email"
+              class="w-full bg-white border border-[#dddddd] rounded-lg py-3 pl-10 pr-4 text-base outline-none focus:border-black"
+            />
+          </div>
+          @if (loginForm.email().touched() && loginForm.email().invalid()) {
+            <ul class="text-[#ff003d]">
+              @for (error of loginForm.email().errors(); track error) {
+                <li>{{ error.message }}</li>
+              }
+            </ul>
+          }
+        </div>
+
+        <div>
+          <label
+            for="password"
+            class="block text-xs font-semibold uppercase tracking-wider text-[#5e5e5e] mb-2"
+          >
+            Senha
+          </label>
+
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-[#7e7576]">
+              <span class="material-symbols-outlined"> lock </span>
+            </span>
+
+            <input
+              id="password"
+              [formField]="loginForm.password"
+              [type]="showPassword ? 'text' : 'password'"
+              placeholder="Informe sua senha"
+              class="w-full bg-white border border-[#dddddd] rounded-lg py-3 pl-10 pr-12 text-base outline-none focus:border-black"
+            />
+
+            <button
+              type="button"
+              (click)="togglePassword()"
+              class="absolute right-0 inset-y-0 flex items-center pr-3 text-[#7e7576] hover:text-black"
+            >
+              <span class="material-symbols-outlined">
+                {{ showPassword ? 'visibility' : 'visibility_off' }}
+              </span>
+            </button>
+          </div>
+          @if (loginForm.password().touched() && loginForm.password().invalid()) {
+            <div class="text-[#ff003d]">
+              @for (error of loginForm.password().errors(); track error) {
+                <p>{{ error.message }}</p>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="pt-2">
+          <button
+            type="submit"
+            class="w-full bg-black text-white font-semibold py-3 rounded-lg hover:bg-[#1b1b1b] transition active:scale-[0.98]"
+          >
+            Entrar
+          </button>
+        </div>
+      </form>
+      <div class="mt-8 text-center text-sm text-[#5e5e5e]">
+        Ainda não tem uma conta?
+
+        <a href="/register" class="text-black font-medium inline-flex items-center gap-1">
+          Criar Conta
+
+          <span class="material-symbols-outlined text-[8px]"> arrow_forward </span>
+        </a>
+      </div>
+    </div>
+
+    <div class="mt-8 flex justify-center gap-6 text-sm text-[#5e5e5e]">
+      <a href="#">Ajuda</a>
+      <a href="#">Privacidade</a>
+      <a href="#">Termos</a>
+    </div>
+  </section>
+</main>
