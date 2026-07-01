@@ -1,1044 +1,302 @@
 {
   "catalog_metadata": {
-    "version": "1.1.0",
-    "created_at": "2026-06-02",
-    "source_dataset": {
-      "name": "Santander Product Recommendation",
-      "url": "https://www.kaggle.com/competitions/santander-product-recommendation/overview",
-      "license": "Competition Rules - Santander",
-      "description": "Dataset com histórico mensal de produtos financeiros de clientes do Banco Santander (Espanha). Transformado para o dataset sintético brasileiro via scripts/generate_synthetic_br.py. Cada linha representa um cliente em um mês específico com flags binárias indicando quais produtos possui.",
-      "target_columns_used": [
-        "possui_emprestimo_pessoal",
-        "possui_cartao_credito",
-        "possui_financiamento_imovel",
-        "possui_fundo_investimento",
-        "possui_cdb_curto_prazo",
-        "possui_cdb_medio_prazo",
-        "possui_previdencia_privada",
-        "possui_titulos_investimento",
-        "possui_aval_garantia"
-      ],
-      "context_columns_used": [
-        "idade", "tempo_relacionamento_meses", "renda_estimada_anual_brl", "segmento",
-        "canal_entrada", "estado", "ind_ativo",
-        "ind_relacionamento", "tipo_rel_inicio_mes"
-      ],
-      "preprocessing_dropped_columns": ["tipodom", "cod_prov"],
-      "notes": "Colunas originais do Santander foram renomeadas para PT-BR via COLUMN_RENAME em scripts/generate_synthetic_br.py. cod_prov foi removido na limpeza (correlacionado com nomprov/estado). Atenção ao vazamento temporal: usar apenas produtos do mês T-1 como contexto para prever adoção no mês T."
+    "version": "2.0.0-prod",
+    "n_arms": 10,
+    "description": "Versão de produção",
+    "reward_definition": {
+      "type": "composite",
+      "formula": "alpha * (expected_revenue_brl / v_max) + beta * click",
+      "alpha": 0.6,
+      "beta": 0.4,
+      "v_max": 7000,
+      "note": "click vem do evento real de feedback do front-end (/feedback)."
     },
-    "br_column_mapping": {
-      "context": {
-        "age":                   "idade",
-        "antiguedad":            "tempo_relacionamento_meses",
-        "renta":                 "renda_estimada_anual_brl",
-        "segmento":              "segmento",
-        "canal_entrada":         "canal_entrada",
-        "nomprov":               "estado",
-        "ind_actividad_cliente": "ind_ativo",
-        "indrel":                "ind_relacionamento",
-        "tiprel_1mes":           "tipo_rel_inicio_mes"
-      },
-      "products": {
-        "ind_pres_fin_ult1":  "possui_emprestimo_pessoal",
-        "ind_tjcr_fin_ult1":  "possui_cartao_credito",
-        "ind_hip_fin_ult1":   "possui_financiamento_imovel",
-        "ind_fond_fin_ult1":  "possui_fundo_investimento",
-        "ind_deco_fin_ult1":  "possui_cdb_curto_prazo",
-        "ind_deme_fin_ult1":  "possui_cdb_medio_prazo",
-        "ind_plan_fin_ult1":  "possui_previdencia_privada",
-        "ind_valo_fin_ult1":  "possui_titulos_investimento",
-        "ind_aval_fin_ult1":  "possui_aval_garantia",
-        "ind_ahor_fin_ult1":  "possui_poupanca",
-        "ind_cco_fin_ult1":   "possui_conta_corrente",
-        "ind_cder_fin_ult1":  "possui_conta_investimento",
-        "ind_cno_fin_ult1":   "possui_conta_salario",
-        "ind_ctju_fin_ult1":  "possui_conta_junior",
-        "ind_ctma_fin_ult1":  "possui_conta_universitaria",
-        "ind_ctop_fin_ult1":  "possui_conta_corrente_plus",
-        "ind_ctpp_fin_ult1":  "possui_conta_premium",
-        "ind_dela_fin_ult1":  "possui_cdb_longo_prazo",
-        "ind_ecue_fin_ult1":  "possui_conta_digital",
-        "ind_reca_fin_ult1":  "possui_pagamento_tributos",
-        "ind_viv_fin_ult1":   "possui_financiamento_veiculo",
-        "ind_nomina_ult1":    "possui_folha_pagamento",
-        "ind_nom_pens_ult1":  "possui_beneficio_previdencia",
-        "ind_recibo_ult1":    "possui_debito_automatico"
-      }
-    },
-    "data_source": {
-      "golden_sample_file": "data/golden_set/golden_clients.csv",
-      "full_dataset_file":  "data/synthetic_enrichment/clientes_br_sintetico.csv",
-      "client_id_column":   "cod_cliente",
-      "date_column":        "data_referencia",
-      "segment_column":     "segmentos_sinteticos",
-      "travel_event_column":"evento_viagem_sintetico",
-      "loader_pattern": {
-        "step_1_filter":  "eligible_segment.santander_filters — filtra clientes elegíveis para cada braço",
-        "step_2_context": "context_features — extrai as colunas de contexto para o MAB",
-        "step_3_reward":  "santander_mapping.br_product_column — coluna alvo para calcular o reward (transição 0→1)"
-      }
-    },
-    "categories": ["credito", "investimento", "seguro"],
-    "total_arms": 10,
-    "reward_types_available": ["binary", "continuous"],
-    "channels_available": ["app_push", "in_app_banner", "email", "sms", "advisor_chat"]
+    "linucb_note": "exploration_factor é escalado por 0.2 no LinUCB.",
+    "filter_conventions": {
+      "_atual": "valor atual da coluna binária de produto (ex: possui_cartao_credito_atual: 0)",
+      "_min": "valor mínimo",
+      "_percentil_min": "percentil mínimo da renda",
+      "idade_min/max": "faixa etária elegível",
+      "sem_sufixo": "igualdade direta"
+    }
   },
-
-  "schema": {
-    "arm_id": "string — identificador único do braço no formato OFF-{CAT}-{NNN}",
-    "name": "string — nome da oferta exibido na interface HP Invest ou dashboard",
-    "category": "enum[credito, investimento, seguro] — categoria do produto",
-    "subcategory": "string — subcategoria descritiva",
-    "description": "string — descrição do produto para o cliente final",
-    "internal_description": "string — descrição técnica para o time de ML e negócio",
-    "santander_mapping": {
-      "product_column": "string — coluna binária original do dataset Santander (null se sintético)",
-      "br_product_column": "string — coluna equivalente no dataset sintético BR (null se sintético sem mapeamento)",
-      "signal_type": "enum[existing_product, synthetic] — se a coluna existe no dataset original ou foi criada sinteticamente",
-      "reward_derivation": "string — como derivar a recompensa desta coluna"
-    },
-    "reward": {
-      "type": "enum[binary, continuous] — binário (adotou/não adotou) ou contínuo (valor em R$)",
-      "event": "string — evento observável que define a recompensa",
-      "horizon_days": "int — dias até a recompensa ser observada (0 = imediata)",
-      "delayed_reward_strategy": "string — como tratar recompensa atrasada no pipeline MAB",
-      "proxy_reward": "string — recompensa proxy imediata quando horizon_days > 0"
-    },
-    "eligible_segment": {
-      "description": "string — descrição qualitativa do público-alvo",
-      "santander_filters": "object — filtros sobre colunas do dataset BR sintético (nomes em PT-BR)",
-      "synthetic_segment_id": "string — ID do segmento sintético para rastreio"
-    },
-    "context_features": "array[string] — colunas do dataset BR sintético usadas como contexto de decisão para LinUCB/contextual MAB",
-    "channels": "array[string] — canais digitais onde esta oferta pode ser exibida",
-    "message_variants": "array[object] — variantes de mensagem (braços filhos para teste de copy)",
-    "thompson_sampling_prior": {
-      "alpha": "float — parâmetro alpha da distribuição Beta (sucessos iniciais + 1)",
-      "beta": "float — parâmetro beta da distribuição Beta (falhas iniciais + 1)",
-      "rationale": "string — justificativa dos priors baseada em benchmarks de mercado ou hipótese"
-    },
-    "ucb_params": {
-      "exploration_factor": "float — fator de exploração c para UCB (c * sqrt(ln(t)/n_i))",
-      "confidence_level": "float — nível de confiança para o intervalo superior"
-    },
-    "synthetic_simulation": {
-      "base_conversion_rate": "float — taxa de conversão base para simulação (entre 0 e 1)",
-      "segment_multipliers": "object — multiplicadores por segmento sintético",
-      "seasonal_pattern": "string — padrão sazonal descritivo",
-      "cold_start": "boolean — true se produto novo sem histórico"
-    },
-    "business_rules": {
-      "min_age": "int|null — idade mínima elegível",
-      "max_age": "int|null — idade máxima elegível",
-      "requires_active_account": "boolean — exige conta ativa",
-      "exclusions": "array[string] — arm_ids mutuamente exclusivos com esta oferta",
-      "suitability_notes": "string — observações de suitability e risco regulatório (LGPD/CMN)"
-    },
-    "frontend_display": {
-      "hp_invest_card": "object — configuração do card na plataforma HP Invest",
-      "dashboard_badge": "object — configuração do badge no dashboard de monitoramento",
-      "icon": "string — nome do ícone Tabler para UI"
-    },
-    "rag_policy_reference": "string — ID do documento de política sintética no corpus RAG"
-  },
-
   "offers": [
-
     {
       "arm_id": "OFF-CR-001",
-      "name": "Empréstimo Pessoal Express",
       "category": "credito",
-      "subcategory": "Crédito Pessoal",
-      "description": "Crédito pessoal pré-aprovado com resposta em até 24h. Sem garantias, taxas competitivas e parcelas fixas.",
-      "internal_description": "Braço de crédito pessoal mapeado sobre possui_emprestimo_pessoal. Alta conversão esperada em clientes ativos com renda acima da mediana. Bom braço âncora para calibração inicial do Thompson Sampling.",
-      "santander_mapping": {
-        "product_column": "ind_pres_fin_ult1",
-        "br_product_column": "possui_emprestimo_pessoal",
-        "signal_type": "existing_product",
-        "reward_derivation": "Recompensa = 1 se cliente que não possuía o produto no mês T-1 passou a possuir no mês T (transição 0→1 em possui_emprestimo_pessoal). Recompensa = 0 caso contrário. Excluir clientes que já possuíam o produto (evitar reapresentação)."
-      },
-      "reward": {
-        "type": "binary",
-        "event": "Contratação do empréstimo pessoal (transição 0→1 na coluna possui_emprestimo_pessoal)",
-        "horizon_days": 30,
-        "delayed_reward_strategy": "Janela de atribuição de 30 dias. Impressão registrada no mês T; reward verificado no mês T+1. Usar optimistic initialization para arms sem observações suficientes.",
-        "proxy_reward": "Abertura de simulação de crédito (clique no CTA da oferta) — recompensa intermediária com peso 0.3"
-      },
+      "product_name": "Crédito Pessoal Pré-Aprovado",
+      "description": "Dinheiro na conta em minutos, com taxa personalizada e sem burocracia.",
+      "expected_revenue_brl": 1600,
+      "context_features": [
+        "idade",
+        "renda_estimada_anual_brl",
+        "tempo_relacionamento_meses",
+        "ind_ativo",
+        "possui_conta_corrente",
+        "possui_cartao_credito",
+        "possui_conta_investimento",
+        "possui_fundo_investimento",
+        "possui_financiamento_imovel"
+      ],
       "eligible_segment": {
-        "description": "Clientes ativos com conta há mais de 6 meses, renda acima da mediana e sem produto de empréstimo ativo",
         "santander_filters": {
           "ind_ativo": 1,
-          "tempo_relacionamento_meses_min": 6,
-          "renda_percentil_min": 50,
-          "possui_emprestimo_pessoal_atual": 0
-        },
-        "synthetic_segment_id": "SEG-CREDITO-ATIVO"
-      },
-      "context_features": ["idade", "renda_estimada_anual_brl", "tempo_relacionamento_meses", "ind_ativo", "segmento", "ind_relacionamento"],
-      "channels": ["app_push", "in_app_banner", "email"],
-      "message_variants": [
-        {
-          "variant_id": "MSG-CR-001-A",
-          "focus": "beneficio",
-          "headline": "Seu crédito pré-aprovado está esperando",
-          "body": "Até R$15.000 sem burocracia. Parcelas que cabem no seu bolso."
-        },
-        {
-          "variant_id": "MSG-CR-001-B",
-          "focus": "urgencia",
-          "headline": "Oferta por tempo limitado",
-          "body": "Taxa especial de X% ao mês disponível só até o fim do mês."
+          "possui_emprestimo_pessoal_atual": 0,
+          "tempo_relacionamento_meses_min": 6
         }
-      ],
-      "thompson_sampling_prior": {
-        "alpha": 3.0,
-        "beta": 20.0,
-        "rationale": "Prior informativo baseado em benchmark de mercado de crédito pessoal digital (~12-15% conversão). Alpha=3, Beta=20 implica prior de ~13%."
       },
       "ucb_params": {
-        "exploration_factor": 1.41,
-        "confidence_level": 0.95
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.13,
-        "segment_multipliers": {
-          "SEG-CREDITO-ATIVO": 1.0,
-          "SEG-JOVEM": 0.7,
-          "SEG-SENIOR": 0.85,
-          "SEG-VIP": 1.4
-        },
-        "seasonal_pattern": "Pico em janeiro (dívidas de fim de ano) e julho (férias). Queda em abril-maio.",
-        "cold_start": false
-      },
-      "business_rules": {
-        "min_age": 18,
-        "max_age": 70,
-        "requires_active_account": true,
-        "exclusions": ["OFF-CR-003"],
-        "suitability_notes": "Verificar capacidade de pagamento sintética antes de exibir. Não exibir para clientes com flag de inadimplência no dataset sintético. Decisão final sempre com humano no loop para valores acima de threshold."
-      },
-      "frontend_display": {
-        "hp_invest_card": {
-          "color_scheme": "purple",
-          "highlight": "Pré-aprovado",
-          "cta_label": "Simular agora"
-        },
-        "dashboard_badge": {
-          "color": "purple",
-          "label": "CR"
-        },
-        "icon": "ti-cash"
-      },
-      "rag_policy_reference": "POL-CREDITO-PESSOAL-v1"
+        "exploration_factor": 1.5
+      }
     },
-
     {
       "arm_id": "OFF-CR-002",
-      "name": "Cartão de Crédito Platinum HP",
       "category": "credito",
-      "subcategory": "Cartão de Crédito",
-      "description": "Cartão com limite diferenciado, programa de pontos e cashback em supermercados e farmácias.",
-      "internal_description": "Braço de cartão mapeado sobre possui_cartao_credito. Produto de maior volume no dataset Santander — conversão moderada, mas alta frequência de elegíveis. Bom braço para explotação após warm-up.",
-      "santander_mapping": {
-        "product_column": "ind_tjcr_fin_ult1",
-        "br_product_column": "possui_cartao_credito",
-        "signal_type": "existing_product",
-        "reward_derivation": "Recompensa = 1 se cliente que não possuía cartão no mês T-1 passou a possuir no mês T (transição 0→1 em possui_cartao_credito)."
-      },
-      "reward": {
-        "type": "binary",
-        "event": "Ativação do cartão de crédito (transição 0→1 em possui_cartao_credito)",
-        "horizon_days": 15,
-        "delayed_reward_strategy": "Janela de 15 dias. Mais curto que empréstimo pois ativação é mais rápida. Usar janela deslizante.",
-        "proxy_reward": "Solicitação do cartão (preenchimento do formulário) — peso 0.5"
-      },
-      "eligible_segment": {
-        "description": "Clientes sem cartão ativo, com renda regular e conta ativa há pelo menos 3 meses",
-        "santander_filters": {
-          "possui_cartao_credito_atual": 0,
-          "ind_ativo": 1,
-          "tempo_relacionamento_meses_min": 3
-        },
-        "synthetic_segment_id": "SEG-SEM-CARTAO"
-      },
-      "context_features": ["idade", "renda_estimada_anual_brl", "segmento", "canal_entrada", "ind_ativo"],
-      "channels": ["in_app_banner", "email", "app_push"],
-      "message_variants": [
-        {
-          "variant_id": "MSG-CR-002-A",
-          "focus": "cashback",
-          "headline": "Ganhe cashback em cada compra",
-          "body": "3% de volta em supermercados. Sem anuidade no primeiro ano."
-        },
-        {
-          "variant_id": "MSG-CR-002-B",
-          "focus": "status",
-          "headline": "Cartão Platinum para clientes selecionados",
-          "body": "Limite diferenciado, acesso a salas VIP e suporte 24h."
-        }
+      "product_name": "Cartão de Crédito Mais",
+      "description": "Seu primeiro cartão sem anuidade, com limite que cresce com o uso.",
+      "expected_revenue_brl": 920,
+      "context_features": [
+        "idade",
+        "renda_estimada_anual_brl",
+        "tempo_relacionamento_meses",
+        "ind_ativo",
+        "possui_conta_corrente",
+        "possui_cartao_credito",
+        "possui_conta_investimento",
+        "possui_fundo_investimento",
+        "possui_financiamento_imovel"
       ],
-      "thompson_sampling_prior": {
-        "alpha": 5.0,
-        "beta": 25.0,
-        "rationale": "Prior baseado em alta frequência do produto no dataset (~16-18% de novos portadores por mês em clientes elegíveis). Alpha=5, Beta=25 implica prior de ~17%."
+      "eligible_segment": {
+        "santander_filters": {
+          "ind_ativo": 1,
+          "possui_cartao_credito_atual": 0,
+          "idade_min": 18
+        }
       },
       "ucb_params": {
-        "exploration_factor": 1.2,
-        "confidence_level": 0.95
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.17,
-        "segment_multipliers": {
-          "SEG-SEM-CARTAO": 1.0,
-          "SEG-JOVEM": 1.2,
-          "SEG-VIP": 0.6
-        },
-        "seasonal_pattern": "Pico em novembro-dezembro (Black Friday e Natal). Estável no restante.",
-        "cold_start": false
-      },
-      "business_rules": {
-        "min_age": 18,
-        "max_age": null,
-        "requires_active_account": true,
-        "exclusions": [],
-        "suitability_notes": "Análise de score sintético obrigatória. Limite inicial conservador para clientes sem histórico."
-      },
-      "frontend_display": {
-        "hp_invest_card": {
-          "color_scheme": "coral",
-          "highlight": "Cashback 3%",
-          "cta_label": "Pedir cartão"
-        },
-        "dashboard_badge": {
-          "color": "coral",
-          "label": "CR"
-        },
-        "icon": "ti-credit-card"
-      },
-      "rag_policy_reference": "POL-CARTAO-CREDITO-v1"
+        "exploration_factor": 1.5
+      }
     },
-
     {
       "arm_id": "OFF-CR-003",
-      "name": "Crédito Imobiliário HP Casa",
       "category": "credito",
-      "subcategory": "Crédito Imobiliário",
-      "description": "Financiamento imobiliário com até 80% do valor do imóvel, prazo de 30 anos e taxa pré-fixada.",
-      "internal_description": "Braço de menor conversão mas maior ticket. Mapeado sobre possui_financiamento_imovel. Produto de decisão longa — delayed reward de até 60 dias. Ideal para demonstrar horizonte temporal estendido no MAB.",
-      "santander_mapping": {
-        "product_column": "ind_hip_fin_ult1",
-        "br_product_column": "possui_financiamento_imovel",
-        "signal_type": "existing_product",
-        "reward_derivation": "Recompensa = 1 se cliente adquiriu financiamento imobiliário no mês T (transição 0→1 em possui_financiamento_imovel)."
-      },
-      "reward": {
-        "type": "binary",
-        "event": "Contratação de financiamento imobiliário (transição 0→1 em possui_financiamento_imovel)",
-        "horizon_days": 60,
-        "delayed_reward_strategy": "Janela de atribuição de 60 dias. Usar desconto temporal (discount_factor=0.95 por dia de atraso). Impressão registrada; reward pode chegar em até 2 meses.",
-        "proxy_reward": "Download de simulador de parcelas — peso 0.2. Agendamento de visita ao imóvel — peso 0.6."
-      },
+      "product_name": "Financiamento Imobiliário",
+      "description": "Realize o sonho da casa própria com prazos longos e taxa competitiva.",
+      "expected_revenue_brl": 6200,
+      "context_features": [
+        "idade",
+        "renda_estimada_anual_brl",
+        "tempo_relacionamento_meses",
+        "ind_ativo",
+        "possui_conta_corrente",
+        "possui_cartao_credito",
+        "possui_conta_investimento",
+        "possui_fundo_investimento",
+        "possui_financiamento_imovel"
+      ],
       "eligible_segment": {
-        "description": "Clientes VIP ou de alta renda, idade entre 25-55, sem financiamento imobiliário ativo",
         "santander_filters": {
+          "ind_ativo": 1,
           "possui_financiamento_imovel_atual": 0,
           "renda_percentil_min": 70,
           "idade_min": 25,
-          "idade_max": 55
-        },
-        "synthetic_segment_id": "SEG-ALTA-RENDA"
-      },
-      "context_features": ["idade", "renda_estimada_anual_brl", "segmento", "tempo_relacionamento_meses", "estado"],
-      "channels": ["email", "advisor_chat"],
-      "message_variants": [
-        {
-          "variant_id": "MSG-CR-003-A",
-          "focus": "sonho",
-          "headline": "Realize o sonho da casa própria",
-          "body": "Simulação gratuita em 2 minutos. Taxa a partir de X% ao ano."
-        },
-        {
-          "variant_id": "MSG-CR-003-B",
-          "focus": "financeiro",
-          "headline": "Parcela menor que seu aluguel atual",
-          "body": "Compare e veja quanto você pode economizar financiando com a HP."
+          "idade_max": 60
         }
-      ],
-      "thompson_sampling_prior": {
-        "alpha": 1.5,
-        "beta": 30.0,
-        "rationale": "Prior fraco — conversão de financiamento imobiliário historicamente baixa (~4-5%). Alpha=1.5, Beta=30 implica prior conservador de ~5%. Alta incerteza justifica mais exploração inicial."
       },
       "ucb_params": {
-        "exploration_factor": 2.0,
-        "confidence_level": 0.95
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.04,
-        "segment_multipliers": {
-          "SEG-ALTA-RENDA": 1.0,
-          "SEG-VIP": 1.8,
-          "SEG-JOVEM": 0.5
-        },
-        "seasonal_pattern": "Pico no primeiro semestre. Queda em dezembro.",
-        "cold_start": false
-      },
-      "business_rules": {
-        "min_age": 21,
-        "max_age": 65,
-        "requires_active_account": true,
-        "exclusions": ["OFF-CR-001"],
-        "suitability_notes": "Produto de alto impacto financeiro. Exige aprovação humana antes de apresentar proposta formal. Não exibir para clientes com renda volátil no histórico sintético."
-      },
-      "frontend_display": {
-        "hp_invest_card": {
-          "color_scheme": "blue",
-          "highlight": "Até 30 anos",
-          "cta_label": "Simular financiamento"
-        },
-        "dashboard_badge": {
-          "color": "blue",
-          "label": "CR"
-        },
-        "icon": "ti-home"
-      },
-      "rag_policy_reference": "POL-CREDITO-IMOB-v1"
+        "exploration_factor": 1.8
+      }
     },
-
     {
       "arm_id": "OFF-INV-001",
-      "name": "Fundo HP Renda Plus",
       "category": "investimento",
-      "subcategory": "Fundos de Investimento",
-      "description": "Fundo de renda fixa com liquidez diária, rentabilidade acima do CDI e aporte mínimo de R$100.",
-      "internal_description": "Braço principal de investimento, mapeado sobre possui_fundo_investimento. Alta frequência no dataset Santander. Produto de entrada para clientes sem experiência em investimentos. Conversão moderada-alta.",
-      "santander_mapping": {
-        "product_column": "ind_fond_fin_ult1",
-        "br_product_column": "possui_fundo_investimento",
-        "signal_type": "existing_product",
-        "reward_derivation": "Recompensa = 1 se cliente adquiriu fundo no mês T (transição 0→1 em possui_fundo_investimento). Para recompensa contínua: usar valor sintético do aporte proporcional à renda_estimada_anual_brl do cliente."
-      },
-      "reward": {
-        "type": "binary",
-        "event": "Primeiro aporte no fundo (transição 0→1 em possui_fundo_investimento)",
-        "horizon_days": 7,
-        "delayed_reward_strategy": "Janela de 7 dias. Relativamente curta pois fundo tem liquidez e decisão é simples.",
-        "proxy_reward": "Visualização da rentabilidade projetada — peso 0.3"
-      },
-      "eligible_segment": {
-        "description": "Clientes ativos com saldo em conta, sem fundo ativo, perfil conservador ou moderado",
-        "santander_filters": {
-          "possui_fundo_investimento_atual": 0,
-          "ind_ativo": 1
-        },
-        "synthetic_segment_id": "SEG-INVESTIDOR-INICIANTE"
-      },
-      "context_features": ["idade", "renda_estimada_anual_brl", "segmento", "ind_ativo", "tempo_relacionamento_meses"],
-      "channels": ["app_push", "in_app_banner", "email"],
-      "message_variants": [
-        {
-          "variant_id": "MSG-INV-001-A",
-          "focus": "rendimento",
-          "headline": "Seu dinheiro rendendo mais que a poupança",
-          "body": "110% do CDI com resgate a qualquer dia. Comece com R$100."
-        },
-        {
-          "variant_id": "MSG-INV-001-B",
-          "focus": "simplicidade",
-          "headline": "Investir nunca foi tão fácil",
-          "body": "3 toques e seu dinheiro já está investindo. Sem taxa de administração no primeiro mês."
-        }
+      "product_name": "CDB Primeiros Passos",
+      "description": "Comece a investir com pouco, rendendo mais que a poupança e com liquidez.",
+      "expected_revenue_brl": 320,
+      "context_features": [
+        "idade",
+        "renda_estimada_anual_brl",
+        "tempo_relacionamento_meses",
+        "ind_ativo",
+        "possui_conta_corrente",
+        "possui_cartao_credito",
+        "possui_conta_investimento",
+        "possui_fundo_investimento",
+        "possui_financiamento_imovel"
       ],
-      "thompson_sampling_prior": {
-        "alpha": 4.0,
-        "beta": 22.0,
-        "rationale": "Prior moderadamente informativo. Fundos são produto frequente no Santander (~15% conversão entre elegíveis). Alpha=4, Beta=22 implica prior de ~15%."
+      "eligible_segment": {
+        "santander_filters": {
+          "ind_ativo": 1,
+          "possui_cdb_curto_prazo_atual": 0
+        }
       },
       "ucb_params": {
-        "exploration_factor": 1.3,
-        "confidence_level": 0.95
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.15,
-        "segment_multipliers": {
-          "SEG-INVESTIDOR-INICIANTE": 1.0,
-          "SEG-VIP": 0.8,
-          "SEG-JOVEM": 1.3,
-          "SEG-SENIOR": 0.9
-        },
-        "seasonal_pattern": "Pico em março-abril (restituição IR). Estável ao longo do ano.",
-        "cold_start": false
-      },
-      "business_rules": {
-        "min_age": 18,
-        "max_age": null,
-        "requires_active_account": true,
-        "exclusions": [],
-        "suitability_notes": "Produto de baixo risco. Adequado para todos os perfis. Exibir declaração de risco sintética antes da contratação."
-      },
-      "frontend_display": {
-        "hp_invest_card": {
-          "color_scheme": "teal",
-          "highlight": "110% CDI",
-          "cta_label": "Investir agora"
-        },
-        "dashboard_badge": {
-          "color": "teal",
-          "label": "INV"
-        },
-        "icon": "ti-chart-line"
-      },
-      "rag_policy_reference": "POL-FUNDOS-v1"
+        "exploration_factor": 1.5
+      }
     },
-
     {
       "arm_id": "OFF-INV-002",
-      "name": "CDB HP Prazo Certo",
       "category": "investimento",
-      "subcategory": "Depósito a Prazo",
-      "description": "CDB com prazo de 1 a 3 anos, rentabilidade crescente conforme prazo escolhido. Garantido pelo FGC.",
-      "internal_description": "Mapeado sobre possui_cdb_curto_prazo e possui_cdb_medio_prazo. Produto com menor liquidez — conversão menor mas ticket médio maior. Bom braço para trade-off exploração/explotação.",
-      "santander_mapping": {
-        "product_column": "ind_deco_fin_ult1",
-        "br_product_column": "possui_cdb_curto_prazo",
-        "signal_type": "existing_product",
-        "reward_derivation": "Recompensa = 1 se cliente adquiriu depósito a prazo (transição 0→1 em possui_cdb_curto_prazo ou possui_cdb_medio_prazo). Recompensa contínua alternativa: valor sintético do depósito como fração da renda_estimada_anual_brl."
-      },
-      "reward": {
-        "type": "binary",
-        "event": "Abertura de CDB (transição 0→1 em possui_cdb_curto_prazo ou possui_cdb_medio_prazo)",
-        "horizon_days": 14,
-        "delayed_reward_strategy": "Janela de 14 dias. Cliente pode levar alguns dias para decidir sobre produto sem liquidez.",
-        "proxy_reward": "Comparação de prazos/taxas na calculadora — peso 0.25"
-      },
-      "eligible_segment": {
-        "description": "Clientes com renda acima da mediana, perfil conservador ou moderado, sem CDB ativo",
-        "santander_filters": {
-          "possui_cdb_curto_prazo_atual": 0,
-          "renda_percentil_min": 50
-        },
-        "synthetic_segment_id": "SEG-POUPADOR"
-      },
-      "context_features": ["idade", "renda_estimada_anual_brl", "segmento", "tempo_relacionamento_meses"],
-      "channels": ["email", "in_app_banner", "advisor_chat"],
-      "message_variants": [
-        {
-          "variant_id": "MSG-INV-002-A",
-          "focus": "seguranca",
-          "headline": "Segurança com rentabilidade superior",
-          "body": "Garantido pelo FGC até R$250 mil. Rende até 115% do CDI."
-        },
-        {
-          "variant_id": "MSG-INV-002-B",
-          "focus": "meta",
-          "headline": "Quanto tempo para realizar seu objetivo?",
-          "body": "Simule sua meta financeira e veja como o CDB pode chegar lá."
-        }
+      "product_name": "CDB Médio Prazo",
+      "description": "Rentabilidade superior para reservas que você não vai usar tão cedo.",
+      "expected_revenue_brl": 680,
+      "context_features": [
+        "idade",
+        "renda_estimada_anual_brl",
+        "tempo_relacionamento_meses",
+        "ind_ativo",
+        "possui_conta_corrente",
+        "possui_cartao_credito",
+        "possui_conta_investimento",
+        "possui_fundo_investimento",
+        "possui_financiamento_imovel"
       ],
-      "thompson_sampling_prior": {
-        "alpha": 2.0,
-        "beta": 20.0,
-        "rationale": "Prior conservador (~9%). Depósitos a prazo têm menor frequência no Santander que fundos. Mais exploração necessária."
+      "eligible_segment": {
+        "santander_filters": {
+          "ind_ativo": 1,
+          "possui_cdb_medio_prazo_atual": 0,
+          "tempo_relacionamento_meses_min": 12
+        }
       },
       "ucb_params": {
-        "exploration_factor": 1.6,
-        "confidence_level": 0.95
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.09,
-        "segment_multipliers": {
-          "SEG-POUPADOR": 1.0,
-          "SEG-ALTA-RENDA": 1.5,
-          "SEG-SENIOR": 1.4,
-          "SEG-JOVEM": 0.6
-        },
-        "seasonal_pattern": "Pico no início do ano. Estável no restante.",
-        "cold_start": false
-      },
-      "business_rules": {
-        "min_age": 18,
-        "max_age": null,
-        "requires_active_account": true,
-        "exclusions": [],
-        "suitability_notes": "Alertar sobre iliquidez antes da contratação. Não recomendar para clientes com flag de necessidade de liquidez imediata no perfil sintético."
-      },
-      "frontend_display": {
-        "hp_invest_card": {
-          "color_scheme": "green",
-          "highlight": "Garantido FGC",
-          "cta_label": "Simular CDB"
-        },
-        "dashboard_badge": {
-          "color": "green",
-          "label": "INV"
-        },
-        "icon": "ti-piggy-bank"
-      },
-      "rag_policy_reference": "POL-CDB-v1"
+        "exploration_factor": 1.5
+      }
     },
-
     {
       "arm_id": "OFF-INV-003",
-      "name": "Previdência HP Futuro",
       "category": "investimento",
-      "subcategory": "Previdência Privada",
-      "description": "PGBL com benefício fiscal no IR. Planos flexíveis com portabilidade garantida e sem carência.",
-      "internal_description": "Mapeado sobre possui_previdencia_privada. Produto sazonal forte — conversão pico em fevereiro-março (declaração IR). Ideal para demonstrar drift sazonal no MAB.",
-      "santander_mapping": {
-        "product_column": "ind_plan_fin_ult1",
-        "br_product_column": "possui_previdencia_privada",
-        "signal_type": "existing_product",
-        "reward_derivation": "Recompensa = 1 se cliente contratou plano de previdência no mês T (transição 0→1 em possui_previdencia_privada)."
-      },
-      "reward": {
-        "type": "binary",
-        "event": "Contratação de plano de previdência (transição 0→1 em possui_previdencia_privada)",
-        "horizon_days": 30,
-        "delayed_reward_strategy": "Janela de 30 dias. Decisão mais complexa, cliente pesquisa antes. Registrar microconversões (downloads de prospecto, simulações).",
-        "proxy_reward": "Simulação de benefício fiscal realizada — peso 0.4"
-      },
-      "eligible_segment": {
-        "description": "Clientes contribuintes do IR, renda alta, faixa etária 30-60 anos",
-        "santander_filters": {
-          "possui_previdencia_privada_atual": 0,
-          "renda_percentil_min": 60,
-          "idade_min": 30,
-          "idade_max": 60
-        },
-        "synthetic_segment_id": "SEG-CONTRIBUINTE-IR"
-      },
-      "context_features": ["idade", "renda_estimada_anual_brl", "segmento", "tempo_relacionamento_meses"],
-      "channels": ["email", "advisor_chat", "in_app_banner"],
-      "message_variants": [
-        {
-          "variant_id": "MSG-INV-003-A",
-          "focus": "imposto",
-          "headline": "Pague menos IR e invista no seu futuro",
-          "body": "Deduza até 12% da renda tributável. Simule sua economia agora."
-        },
-        {
-          "variant_id": "MSG-INV-003-B",
-          "focus": "aposentadoria",
-          "headline": "Quanto você precisa para se aposentar bem?",
-          "body": "Descubra em 2 minutos e comece hoje com o valor que couber no seu bolso."
-        }
+      "product_name": "Previdência Privada PGBL",
+      "description": "Planeje a aposentadoria e ainda abata até 12% da renda no Imposto de Renda.",
+      "expected_revenue_brl": 2400,
+      "context_features": [
+        "idade",
+        "renda_estimada_anual_brl",
+        "tempo_relacionamento_meses",
+        "ind_ativo",
+        "possui_conta_corrente",
+        "possui_cartao_credito",
+        "possui_conta_investimento",
+        "possui_fundo_investimento",
+        "possui_financiamento_imovel"
       ],
-      "thompson_sampling_prior": {
-        "alpha": 1.5,
-        "beta": 18.0,
-        "rationale": "Prior fraco com alta variância sazonal (~7-8% base, até 20% em fev-mar). Requer atualização frequente dos priors por período. Exploração maior fora da temporada de IR."
+      "eligible_segment": {
+        "santander_filters": {
+          "ind_ativo": 1,
+          "possui_previdencia_privada_atual": 0,
+          "renda_percentil_min": 50
+        }
       },
       "ucb_params": {
-        "exploration_factor": 1.8,
-        "confidence_level": 0.95
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.07,
-        "segment_multipliers": {
-          "SEG-CONTRIBUINTE-IR": 1.0,
-          "SEG-VIP": 1.6,
-          "SEG-ALTA-RENDA": 1.4,
-          "SEG-JOVEM": 0.4,
-          "SEG-SENIOR": 1.2
-        },
-        "seasonal_pattern": "Pico forte em fevereiro-março (IR). Conversão 3x maior nesse período. Queda acentuada em abril-janeiro.",
-        "cold_start": false
-      },
-      "business_rules": {
-        "min_age": 18,
-        "max_age": 70,
-        "requires_active_account": true,
-        "exclusions": [],
-        "suitability_notes": "Produto de longo prazo. Esclarecer tributação regressiva vs progressiva antes da oferta. Humano no loop para portabilidade de valores acima de R$50k sintético."
-      },
-      "frontend_display": {
-        "hp_invest_card": {
-          "color_scheme": "amber",
-          "highlight": "Benefício fiscal IR",
-          "cta_label": "Simular economia"
-        },
-        "dashboard_badge": {
-          "color": "amber",
-          "label": "INV"
-        },
-        "icon": "ti-umbrella"
-      },
-      "rag_policy_reference": "POL-PREVIDENCIA-v1"
+        "exploration_factor": 1.6
+      }
     },
-
     {
       "arm_id": "OFF-INV-004",
-      "name": "HP Renda Variável — Primeiro Aporte",
       "category": "investimento",
-      "subcategory": "Renda Variável",
-      "description": "Carteira de ações diversificada gerenciada por algoritmo. Primeiro aporte com taxa zero e simulador de risco interativo.",
-      "internal_description": "Mapeado sobre possui_titulos_investimento. Produto de cold-start no contexto do projeto — menor histórico, perfil mais restrito. Ideal para demonstrar exploração com prior não-informativo.",
-      "santander_mapping": {
-        "product_column": "ind_valo_fin_ult1",
-        "br_product_column": "possui_titulos_investimento",
-        "signal_type": "existing_product",
-        "reward_derivation": "Recompensa = 1 se cliente adquiriu títulos de investimento no mês T (transição 0→1 em possui_titulos_investimento)."
-      },
-      "reward": {
-        "type": "binary",
-        "event": "Primeiro aporte em renda variável (transição 0→1 em possui_titulos_investimento)",
-        "horizon_days": 7,
-        "delayed_reward_strategy": "Janela de 7 dias. Decisão mais rápida para perfis arrojados. Usar contagem de sessões no simulador como sinal de intenção.",
-        "proxy_reward": "Conclusão do simulador de risco interativo — peso 0.5"
-      },
-      "eligible_segment": {
-        "description": "Clientes jovens ou de perfil arrojado, já com experiência em outros produtos de investimento",
-        "santander_filters": {
-          "possui_titulos_investimento_atual": 0,
-          "possui_fundo_investimento_atual": 1
-        },
-        "synthetic_segment_id": "SEG-INVESTIDOR-EXPERIENTE"
-      },
-      "context_features": ["idade", "renda_estimada_anual_brl", "segmento", "possui_fundo_investimento"],
-      "channels": ["app_push", "in_app_banner"],
-      "message_variants": [
-        {
-          "variant_id": "MSG-INV-004-A",
-          "focus": "retorno",
-          "headline": "Sua carteira pode render muito mais",
-          "body": "Histórico de +18% ao ano. Veja a simulação personalizada para você."
-        },
-        {
-          "variant_id": "MSG-INV-004-B",
-          "focus": "controle",
-          "headline": "Você decide o risco. O algoritmo cuida do resto.",
-          "body": "Defina seu perfil e comece com o valor que quiser. Sem taxa por 3 meses."
-        }
+      "product_name": "Fundo Multimercado",
+      "description": "Gestão ativa em juros, câmbio e bolsa para diversificar a carteira.",
+      "expected_revenue_brl": 1850,
+      "context_features": [
+        "idade",
+        "renda_estimada_anual_brl",
+        "tempo_relacionamento_meses",
+        "ind_ativo",
+        "possui_conta_corrente",
+        "possui_cartao_credito",
+        "possui_conta_investimento",
+        "possui_fundo_investimento",
+        "possui_financiamento_imovel"
       ],
-      "thompson_sampling_prior": {
-        "alpha": 1.0,
-        "beta": 10.0,
-        "rationale": "Prior não-informativo (quase uniforme) — produto com poucos dados históricos no segmento elegível. Demonstra cold-start: MAB precisa explorar mais no início para estimar a taxa real."
+      "eligible_segment": {
+        "santander_filters": {
+          "ind_ativo": 1,
+          "possui_fundo_investimento_atual": 0
+        }
       },
       "ucb_params": {
-        "exploration_factor": 2.2,
-        "confidence_level": 0.95
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.08,
-        "segment_multipliers": {
-          "SEG-INVESTIDOR-EXPERIENTE": 1.0,
-          "SEG-JOVEM": 1.5,
-          "SEG-VIP": 1.3,
-          "SEG-SENIOR": 0.4
-        },
-        "seasonal_pattern": "Pico após fortes altas da bolsa (momentum). Queda em crises simuladas.",
-        "cold_start": true
-      },
-      "business_rules": {
-        "min_age": 18,
-        "max_age": null,
-        "requires_active_account": true,
-        "exclusions": [],
-        "suitability_notes": "Exige suitability de perfil arrojado. Não exibir para clientes com perfil conservador no questionário sintético. Disclaimer de risco obrigatório antes do CTA."
-      },
-      "frontend_display": {
-        "hp_invest_card": {
-          "color_scheme": "coral",
-          "highlight": "Cold-start — explorando",
-          "cta_label": "Ver simulação"
-        },
-        "dashboard_badge": {
-          "color": "coral",
-          "label": "INV"
-        },
-        "icon": "ti-trending-up"
-      },
-      "rag_policy_reference": "POL-RENDA-VARIAVEL-v1"
+        "exploration_factor": 2.2
+      }
     },
-
     {
       "arm_id": "OFF-SEG-001",
-      "name": "Seguro de Vida HP Proteção",
       "category": "seguro",
-      "subcategory": "Seguro de Vida",
-      "description": "Cobertura por morte e invalidez a partir de R$29,90/mês. Contratação 100% digital, sem exame médico até determinado valor.",
-      "internal_description": "Produto sintético — não há coluna direta de seguro de vida no dataset Santander. Mapeado sinteticamente a partir de possui_aval_garantia com enriquecimento. Braço de menor conversão esperada — demonstra exploração prolongada.",
-      "santander_mapping": {
-        "product_column": "ind_aval_fin_ult1",
-        "br_product_column": "possui_aval_garantia",
-        "signal_type": "synthetic",
-        "reward_derivation": "Recompensa sintética gerada com probabilidade baseada no segmento e renda_estimada_anual_brl do cliente. possui_aval_garantia usado como proxy de aversão ao risco: cliente com garantia tende a contratar seguro."
-      },
-      "reward": {
-        "type": "binary",
-        "event": "Contratação do seguro de vida (evento sintético gerado por simulação)",
-        "horizon_days": 21,
-        "delayed_reward_strategy": "Janela de 21 dias. Decisão emocional — cliente costuma refletir. Usar engajamento com conteúdo educativo como proxy.",
-        "proxy_reward": "Leitura do conteúdo 'Por que ter seguro de vida?' — peso 0.2. Uso da calculadora de proteção familiar — peso 0.4."
-      },
-      "eligible_segment": {
-        "description": "Clientes com dependentes (proxy: perfil familiar sintético), renda regular, faixa etária 25-60",
-        "santander_filters": {
-          "idade_min": 25,
-          "idade_max": 60,
-          "ind_ativo": 1
-        },
-        "synthetic_segment_id": "SEG-PERFIL-FAMILIAR"
-      },
-      "context_features": ["idade", "renda_estimada_anual_brl", "segmento", "tempo_relacionamento_meses"],
-      "channels": ["email", "in_app_banner", "app_push"],
-      "message_variants": [
-        {
-          "variant_id": "MSG-SEG-001-A",
-          "focus": "protecao",
-          "headline": "Quem você protegeria se não estivesse aqui?",
-          "body": "Seguro de vida a partir de R$29,90/mês. Sem burocracia, 100% digital."
-        },
-        {
-          "variant_id": "MSG-SEG-001-B",
-          "focus": "custo",
-          "headline": "Menos de R$1 por dia para proteger quem você ama",
-          "body": "Indenização de até R$100 mil. Contrate agora em 3 minutos."
-        }
+      "product_name": "Seguro de Vida Familiar",
+      "description": "Proteção financeira para quem você ama, com cobertura estendida à família.",
+      "expected_revenue_brl": 680,
+      "context_features": [
+        "idade",
+        "renda_estimada_anual_brl",
+        "tempo_relacionamento_meses",
+        "ind_ativo",
+        "possui_conta_corrente",
+        "possui_cartao_credito",
+        "possui_conta_investimento",
+        "possui_fundo_investimento",
+        "possui_financiamento_imovel"
       ],
-      "thompson_sampling_prior": {
-        "alpha": 1.2,
-        "beta": 18.0,
-        "rationale": "Prior fraco (~6%). Seguro de vida em canal digital tem conversão historicamente baixa. Exploração maior necessária para estimar taxa real no segmento sintético."
+      "eligible_segment": {
+        "santander_filters": {
+          "ind_ativo": 1,
+          "idade_min": 25,
+          "idade_max": 70
+        }
       },
       "ucb_params": {
-        "exploration_factor": 2.0,
-        "confidence_level": 0.95
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.06,
-        "segment_multipliers": {
-          "SEG-PERFIL-FAMILIAR": 1.0,
-          "SEG-SENIOR": 1.3,
-          "SEG-VIP": 1.4,
-          "SEG-JOVEM": 0.5
-        },
-        "seasonal_pattern": "Leve pico em outubro-novembro (mês do planejamento financeiro). Estável no restante.",
-        "cold_start": false
-      },
-      "business_rules": {
-        "min_age": 18,
-        "max_age": 65,
-        "requires_active_account": false,
-        "exclusions": [],
-        "suitability_notes": "Produto de proteção — sem requisito de suitability de investidor. Verificar restrições de saúde sintéticas no perfil. Humano no loop para coberturas acima de R$500k sintético."
-      },
-      "frontend_display": {
-        "hp_invest_card": {
-          "color_scheme": "blue",
-          "highlight": "R$29,90/mês",
-          "cta_label": "Contratar proteção"
-        },
-        "dashboard_badge": {
-          "color": "blue",
-          "label": "SEG"
-        },
-        "icon": "ti-heart"
-      },
-      "rag_policy_reference": "POL-SEGURO-VIDA-v1"
+        "exploration_factor": 1.4
+      }
     },
-
     {
       "arm_id": "OFF-SEG-002",
-      "name": "Seguro Residencial HP Casa Segura",
       "category": "seguro",
-      "subcategory": "Seguro Residencial",
-      "description": "Proteção completa para imóvel: incêndio, roubo, danos elétricos e assistência 24h. Parcelas a partir de R$19,90/mês.",
-      "internal_description": "Produto sintético. Sem mapeamento direto no Santander — gerado via enriquecimento sintético. Correlacionado com clientes que possuem financiamento imobiliário (OFF-CR-003). Demonstra co-ocorrência de produtos e cross-sell no MAB.",
-      "santander_mapping": {
-        "product_column": null,
-        "br_product_column": null,
-        "signal_type": "synthetic",
-        "reward_derivation": "Recompensa 100% sintética. Gerada por modelo de propensão simples baseado em: possui_financiamento_imovel=1 * fator de renda * fator de segmento. Documentado em data-generation.md."
-      },
-      "reward": {
-        "type": "binary",
-        "event": "Contratação do seguro residencial (evento 100% sintético)",
-        "horizon_days": 14,
-        "delayed_reward_strategy": "Janela de 14 dias. Decisão moderada. Usar visualização da cobertura como proxy.",
-        "proxy_reward": "Consulta à tabela de coberturas — peso 0.35"
-      },
-      "eligible_segment": {
-        "description": "Clientes proprietários de imóvel (proxy: possui financiamento imobiliário ativo ou renda alta) sem seguro residencial",
-        "santander_filters": {
-          "possui_financiamento_imovel_atual": 1
-        },
-        "synthetic_segment_id": "SEG-PROPRIETARIO"
-      },
-      "context_features": ["idade", "renda_estimada_anual_brl", "segmento", "possui_financiamento_imovel", "estado"],
-      "channels": ["email", "in_app_banner"],
-      "message_variants": [
-        {
-          "variant_id": "MSG-SEG-002-A",
-          "focus": "risco",
-          "headline": "Seu imóvel está protegido?",
-          "body": "Um curto-circuito pode causar prejuízo de R$30 mil. Proteja-se por R$19,90/mês."
-        },
-        {
-          "variant_id": "MSG-SEG-002-B",
-          "focus": "conveniencia",
-          "headline": "Assistência 24h no conforto do seu app",
-          "body": "Encanador, eletricista e chaveiro quando precisar. Contrate junto ao seu financiamento."
-        }
+      "product_name": "Seguro Residencial",
+      "description": "Proteja seu imóvel contra incêndio, roubo e danos elétricos.",
+      "expected_revenue_brl": 420,
+      "context_features": [
+        "idade",
+        "renda_estimada_anual_brl",
+        "tempo_relacionamento_meses",
+        "ind_ativo",
+        "possui_conta_corrente",
+        "possui_cartao_credito",
+        "possui_conta_investimento",
+        "possui_fundo_investimento",
+        "possui_financiamento_imovel"
       ],
-      "thompson_sampling_prior": {
-        "alpha": 2.0,
-        "beta": 22.0,
-        "rationale": "Prior moderado (~8%). Cross-sell com financiamento imobiliário tem conversão razoável. Clientes com financiamento já demonstraram comportamento de proteção financeira."
+      "eligible_segment": {
+        "santander_filters": {
+          "ind_ativo": 1,
+          "possui_financiamento_imovel_atual": 1
+        }
       },
       "ucb_params": {
-        "exploration_factor": 1.5,
-        "confidence_level": 0.95
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.08,
-        "segment_multipliers": {
-          "SEG-PROPRIETARIO": 1.0,
-          "SEG-ALTA-RENDA": 1.3,
-          "SEG-VIP": 1.5,
-          "SEG-JOVEM": 0.7
-        },
-        "seasonal_pattern": "Leve pico no verão (temporada de chuvas/granizo). Estável no restante.",
-        "cold_start": false
-      },
-      "business_rules": {
-        "min_age": 18,
-        "max_age": null,
-        "requires_active_account": false,
-        "exclusions": [],
-        "suitability_notes": "Verificar se cliente já possui seguro residencial em outro produto do portfólio sintético. Evitar duplicidade."
-      },
-      "frontend_display": {
-        "hp_invest_card": {
-          "color_scheme": "green",
-          "highlight": "Assistência 24h",
-          "cta_label": "Proteger meu imóvel"
-        },
-        "dashboard_badge": {
-          "color": "green",
-          "label": "SEG"
-        },
-        "icon": "ti-shield-check"
-      },
-      "rag_policy_reference": "POL-SEGURO-RESIDENCIAL-v1"
+        "exploration_factor": 1.7
+      }
     },
-
     {
       "arm_id": "OFF-SEG-003",
-      "name": "Seguro Viagem HP Go",
       "category": "seguro",
-      "subcategory": "Seguro Viagem",
-      "description": "Cobertura internacional com assistência médica, cancelamento e extravio de bagagem. Contratação por viagem (1 a 90 dias).",
-      "internal_description": "Produto sintético event-triggered. Disparado por evento contextual sintético (compra de passagem aérea ou câmbio). Demonstra uso de contexto dinâmico no MAB — o contexto de decisão muda por evento, não por segmento fixo.",
-      "santander_mapping": {
-        "product_column": null,
-        "br_product_column": null,
-        "signal_type": "synthetic",
-        "reward_derivation": "Recompensa 100% sintética. Gerada com probabilidade condicional ao evento-gatilho: P(reward=1 | evento_viagem_sintetico=1) = 0.22. Sem evento, P(reward=1) = 0.02. Documenta o papel do contexto no MAB."
-      },
-      "reward": {
-        "type": "binary",
-        "event": "Contratação do seguro viagem após evento-gatilho (evento 100% sintético)",
-        "horizon_days": 3,
-        "delayed_reward_strategy": "Janela muito curta (3 dias) — produto event-triggered com urgência natural. Janela longa reduziria precisão da atribuição ao evento.",
-        "proxy_reward": "Clique na oferta após evento-gatilho — peso 0.6 (alta intenção dado contexto)"
-      },
+      "product_name": "Seguro Viagem",
+      "description": "Cobertura médica e de bagagem para sua próxima viagem, nacional ou internacional.",
+      "expected_revenue_brl": 240,
+      "context_features": [
+        "idade",
+        "renda_estimada_anual_brl",
+        "tempo_relacionamento_meses",
+        "ind_ativo",
+        "possui_conta_corrente",
+        "possui_cartao_credito",
+        "possui_conta_investimento",
+        "possui_fundo_investimento",
+        "possui_financiamento_imovel"
+      ],
       "eligible_segment": {
-        "description": "Qualquer cliente ativo com evento sintético de viagem detectado (compra de câmbio ou passagem)",
         "santander_filters": {
           "ind_ativo": 1
-        },
-        "synthetic_segment_id": "SEG-VIAJANTE-EVENTO"
-      },
-      "context_features": ["idade", "renda_estimada_anual_brl", "segmento", "canal_entrada", "evento_viagem_sintetico"],
-      "channels": ["app_push"],
-      "message_variants": [
-        {
-          "variant_id": "MSG-SEG-003-A",
-          "focus": "emergencia",
-          "headline": "Viajando? Não esqueça a proteção",
-          "body": "Assistência médica internacional 24h. A partir de R$15 por dia de viagem."
-        },
-        {
-          "variant_id": "MSG-SEG-003-B",
-          "focus": "tranquilidade",
-          "headline": "Curta a viagem, deixe as preocupações conosco",
-          "body": "Cobertura completa: saúde, bagagem e cancelamento. Garanta agora."
         }
-      ],
-      "thompson_sampling_prior": {
-        "alpha": 3.0,
-        "beta": 11.0,
-        "rationale": "Prior mais informativo dado contexto event-triggered (~22% quando evento presente). Alpha=3, Beta=11 implica prior de ~21%. Contexto eleva muito a prior."
       },
       "ucb_params": {
-        "exploration_factor": 1.0,
-        "confidence_level": 0.95
-      },
-      "synthetic_simulation": {
-        "base_conversion_rate": 0.22,
-        "segment_multipliers": {
-          "SEG-VIAJANTE-EVENTO": 1.0,
-          "SEG-VIP": 1.3,
-          "SEG-JOVEM": 0.9,
-          "SEG-SENIOR": 1.2
-        },
-        "seasonal_pattern": "Pico em dezembro-janeiro (férias) e julho (férias de inverno). Muito sazonal.",
-        "cold_start": false
-      },
-      "business_rules": {
-        "min_age": 0,
-        "max_age": 85,
-        "requires_active_account": false,
-        "exclusions": [],
-        "suitability_notes": "Produto com menor restrição. Verificar destino sintético para adequar coberturas. Exibir somente quando evento_viagem_sintetico=1 presente no contexto."
-      },
-      "frontend_display": {
-        "hp_invest_card": {
-          "color_scheme": "teal",
-          "highlight": "Event-triggered",
-          "cta_label": "Adicionar proteção"
-        },
-        "dashboard_badge": {
-          "color": "teal",
-          "label": "SEG"
-        },
-        "icon": "ti-plane"
-      },
-      "rag_policy_reference": "POL-SEGURO-VIAGEM-v1"
+        "exploration_factor": 1.7
+      }
     }
-
-  ],
-
-  "synthetic_segments": {
-    "SEG-CREDITO-ATIVO":        { "description": "Cliente ativo (ind_ativo=1), adimplente, renda mediana ou superior" },
-    "SEG-SEM-CARTAO":           { "description": "Cliente sem cartão de crédito (possui_cartao_credito=0), conta ativa >3 meses" },
-    "SEG-ALTA-RENDA":           { "description": "Renda acima do percentil 70 (renda_estimada_anual_brl), produto premium elegível" },
-    "SEG-INVESTIDOR-INICIANTE": { "description": "Sem produtos de investimento, conta ativa, qualquer renda" },
-    "SEG-POUPADOR":             { "description": "Renda mediana ou superior, sem CDB ativo (possui_cdb_curto_prazo=0), perfil conservador" },
-    "SEG-CONTRIBUINTE-IR":      { "description": "Renda alta, faixa 30-60 anos (idade), elegível para PGBL" },
-    "SEG-INVESTIDOR-EXPERIENTE":{ "description": "Já possui fundo de investimento (possui_fundo_investimento=1), perfil moderado-arrojado" },
-    "SEG-PERFIL-FAMILIAR":      { "description": "Proxy de perfil com dependentes, faixa 25-60 anos (idade)" },
-    "SEG-PROPRIETARIO":         { "description": "Proxy de proprietário de imóvel (possui_financiamento_imovel=1 ou renda alta)" },
-    "SEG-VIAJANTE-EVENTO":      { "description": "Evento sintético de viagem detectado (evento_viagem_sintetico=1)" },
-    "SEG-JOVEM":                { "description": "Idade < 30 anos" },
-    "SEG-SENIOR":               { "description": "Idade >= 55 anos" },
-    "SEG-VIP":                  { "description": "Segmento alta renda no dataset BR sintético (segmento='01 - ALTA RENDA')" }
-  },
-
-  "mab_design_notes": {
-    "total_arms": 10,
-    "arms_by_category": {
-      "credito":      ["OFF-CR-001", "OFF-CR-002", "OFF-CR-003"],
-      "investimento": ["OFF-INV-001", "OFF-INV-002", "OFF-INV-003", "OFF-INV-004"],
-      "seguro":       ["OFF-SEG-001", "OFF-SEG-002", "OFF-SEG-003"]
-    },
-    "conversion_rate_diversity": "Taxas variam de 4% (OFF-CR-003) a 22% (OFF-SEG-003 com evento). Garante cenário rico para exploração/explotação.",
-    "cold_start_arm": "OFF-INV-004 — único braço com cold_start=true. Usar prior não-informativo e higher exploration_factor.",
-    "delayed_reward_range": "3 dias (OFF-SEG-003) a 60 dias (OFF-CR-003). Pipeline deve suportar múltiplas janelas de atribuição.",
-    "seasonal_arms": ["OFF-INV-003", "OFF-SEG-003", "OFF-CR-001"],
-    "event_triggered_arms": ["OFF-SEG-003"],
-    "synthetic_arms": ["OFF-SEG-001", "OFF-SEG-002", "OFF-SEG-003"]
-  }
+  ]
 }
