@@ -1,3 +1,4 @@
+from enums.usuario import TipoUsuario
 from schemas.base import BaseSchema
 
 
@@ -15,4 +16,9 @@ class UserLogin(UserBase):
 
 
 class UserResponse(BaseSchema):
+    """Dados da conta do usuário logado. `cod_cliente`/`saldo_ficticio` só existem p/ `tipo='demo'`."""
+
     email: str
+    tipo: TipoUsuario | None = None
+    cod_cliente: int | None = None
+    saldo_ficticio: float | None = None

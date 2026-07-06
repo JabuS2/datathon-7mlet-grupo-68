@@ -28,6 +28,11 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
+    # DATABASE_URL tem precedência (Docker/Compose); senão monta a partir dos POSTGRES_*.
+    url = os.getenv("DATABASE_URL")
+    if url:
+        return url
+
     user = os.getenv("POSTGRES_USER", "postgres")
     password = os.getenv("POSTGRES_PASSWORD", "postgres")
     server = os.getenv("POSTGRES_SERVER", "localhost")
