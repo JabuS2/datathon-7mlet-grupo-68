@@ -1,3 +1,6 @@
+from collections.abc import Callable
+from typing import TypeVar, cast
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repositories.aprovacao_humana import AprovacaoHumanaRepository
@@ -16,6 +19,8 @@ from repositories.regra_adequacao import RegraAdequacaoRepository
 from repositories.segmento import SegmentoRepository
 from repositories.user import UserRepository
 
+T = TypeVar("T")
+
 
 class UnitOfWork:
     """Controla a transação (commit/rollback) e expõe os repositórios de cada agregado.
@@ -28,12 +33,12 @@ class UnitOfWork:
         self.session = session
         self._repos: dict[str, object] = {}
 
-    def _repo(self, key: str, factory):
+    def _repo(self, key: str, factory: Callable[[AsyncSession], T]) -> T:
         repo = self._repos.get(key)
         if repo is None:
             repo = factory(self.session)
             self._repos[key] = repo
-        return repo
+        return cast(T, repo)
 
     # ── Catálogo & contexto ──────────────────────────────────────
     @property

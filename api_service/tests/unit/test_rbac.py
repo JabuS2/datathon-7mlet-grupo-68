@@ -1,4 +1,5 @@
 """E8 — RBAC: a guarda `require_role` barra papéis fora do permitido (Etapa 8)."""
+
 import pytest
 
 from core.auth_dependencies import require_operador, require_role

@@ -2,6 +2,7 @@
 
 Testes controlados (matemática das políticas) + uma checagem sobre o golden set real.
 """
+
 from pathlib import Path
 
 import numpy as np
@@ -19,9 +20,15 @@ from settings import settings
 
 GOLDEN = Path(settings.DATA_DIR) / "golden_set"
 CTX_COLS = [
-    "idade", "renda_estimada_anual_brl", "tempo_relacionamento_meses", "ind_ativo",
-    "possui_conta_corrente", "possui_cartao_credito", "possui_conta_investimento",
-    "possui_fundo_investimento", "possui_financiamento_imovel",
+    "idade",
+    "renda_estimada_anual_brl",
+    "tempo_relacionamento_meses",
+    "ind_ativo",
+    "possui_conta_corrente",
+    "possui_cartao_credito",
+    "possui_conta_investimento",
+    "possui_fundo_investimento",
+    "possui_financiamento_imovel",
 ]
 
 
@@ -38,12 +45,20 @@ def clients():
 
 # ── elegibilidade ────────────────────────────────────────────────
 def test_eligibility_suffix_conventions():
-    client = {"ind_ativo": 1, "possui_cartao_credito": 0, "idade": 30, "tempo_relacionamento_meses": 10}
+    client = {
+        "ind_ativo": 1,
+        "possui_cartao_credito": 0,
+        "idade": 30,
+        "tempo_relacionamento_meses": 10,
+    }
     # cliente ativo, sem cartão, idade>=18 → elegível ao OFF-CR-002
-    assert is_eligible(client, {"ind_ativo": 1, "possui_cartao_credito_atual": 0, "idade_min": 18}, 50.0)
+    assert is_eligible(
+        client, {"ind_ativo": 1, "possui_cartao_credito_atual": 0, "idade_min": 18}, 50.0
+    )
     # já tem cartão → inelegível (_atual != 0)
-    assert not is_eligible({**client, "possui_cartao_credito": 1},
-                           {"possui_cartao_credito_atual": 0}, 50.0)
+    assert not is_eligible(
+        {**client, "possui_cartao_credito": 1}, {"possui_cartao_credito_atual": 0}, 50.0
+    )
     # renda abaixo do percentil mínimo → inelegível
     assert not is_eligible(client, {"renda_percentil_min": 70}, 50.0)
     # idade acima do máximo → inelegível
@@ -53,11 +68,11 @@ def test_eligibility_suffix_conventions():
 def test_eligibility_average_on_golden(catalog, clients):
     _reward, offers = catalog
     stats = ReferenceStats.fit(clients, CTX_COLS)
-    engine = BanditEngine(offers, stats)
     counts = []
     for c in clients:
         pct = stats.renda_percentile(c.get("renda_estimada_anual_brl"))
         from services.bandit.eligibility import eligible_arm_ids
+
         counts.append(len(eligible_arm_ids(c, offers, pct)))
     avg = sum(counts) / len(counts)
     assert 1.0 <= avg <= 10.0  # cada cliente é elegível a um subconjunto plausível dos 10 braços

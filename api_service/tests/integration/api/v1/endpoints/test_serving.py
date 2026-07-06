@@ -3,6 +3,7 @@
 Usa o harness de integração (conftest): Postgres migrado + `client` httpx. Semeia catálogo,
 políticas e um subset de clientes antes de exercitar o fluxo ponta a ponta.
 """
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import func, select
@@ -18,11 +19,11 @@ from settings import settings
 @pytest_asyncio.fixture
 async def cod_cliente(session_factory) -> int:
     """Semeia catálogo + políticas + 40 clientes (committed) e devolve um cliente ativo."""
+    async with session_factory() as s, UnitOfWork(s) as uow:
+        await seed_all(uow, settings.DATA_DIR, client_limit=40)
     async with session_factory() as s:
-        async with UnitOfWork(s) as uow:
-            await seed_all(uow, settings.DATA_DIR, client_limit=40)
-    async with session_factory() as s:
-        return await s.scalar(select(Cliente.cod_cliente).where(Cliente.ind_ativo).limit(1))
+        cod: int = await s.scalar(select(Cliente.cod_cliente).where(Cliente.ind_ativo).limit(1))
+        return cod
 
 
 @pytest.mark.asyncio
@@ -42,7 +43,9 @@ async def test_decide_persists_auditable_decision(client, cod_cliente, session_f
 
 @pytest.mark.asyncio
 async def test_full_loop_decide_feedback_reward(client, cod_cliente, session_factory):
-    decided = (await client.post("/decide", json={"codCliente": cod_cliente, "channel": "app"})).json()
+    decided = (
+        await client.post("/decide", json={"codCliente": cod_cliente, "channel": "app"})
+    ).json()
     did = decided["decisionId"]
 
     fb = await client.post("/feedback", json={"decisionId": did, "type": "click"})

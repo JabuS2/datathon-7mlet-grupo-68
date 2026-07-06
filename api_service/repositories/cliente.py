@@ -23,12 +23,13 @@ class ClienteRepository(BaseRepository[Cliente]):
         base = select(Cliente).where(Cliente.origem == OrigemCliente.SEED)
         order = func.abs(Cliente.idade - idade)
         if segmento:
-            row = await self.session.scalar(
+            row: Cliente | None = await self.session.scalar(
                 base.where(Cliente.segmento == segmento).order_by(order).limit(1)
             )
             if row is not None:
                 return row
-        return await self.session.scalar(base.order_by(order).limit(1))
+        fallback: Cliente | None = await self.session.scalar(base.order_by(order).limit(1))
+        return fallback
 
     async def max_cod_cliente(self, *, only_demo: bool = False) -> int | None:
         """Maior `cod_cliente` (para alocar o próximo id de perfil demo na faixa reservada)."""
@@ -36,4 +37,5 @@ class ClienteRepository(BaseRepository[Cliente]):
         if only_demo:
             stmt = stmt.where(Cliente.origem == OrigemCliente.DEMO)
         stmt = stmt.order_by(Cliente.cod_cliente.desc()).limit(1)
-        return await self.session.scalar(stmt)
+        result: int | None = await self.session.scalar(stmt)
+        return result

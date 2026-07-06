@@ -19,7 +19,10 @@ class AprovacaoHumana(Base):
 
     gate_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     run_id: Mapped[str] = mapped_column(
-        String(80), ForeignKey("ciclos_retreino.run_id", ondelete="CASCADE"), nullable=False, index=True
+        String(80),
+        ForeignKey("ciclos_retreino.run_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False

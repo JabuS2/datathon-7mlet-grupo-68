@@ -10,7 +10,7 @@ from models.columns import enum_column
 
 
 class MetricaMonitoramento(Base):
-    """Série temporal de métricas de uma política em operação (regret, conversão, reward, PSI drift).
+    """Série temporal de métricas de uma política (regret, conversão, reward, PSI drift).
 
     Detecta degradação — `alert=True` marca quando ultrapassa o limiar (Etapa 7).
     """
@@ -19,7 +19,10 @@ class MetricaMonitoramento(Base):
 
     snapshot_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     policy_id: Mapped[str] = mapped_column(
-        String(60), ForeignKey("politicas.policy_id", ondelete="CASCADE"), nullable=False, index=True
+        String(60),
+        ForeignKey("politicas.policy_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     metric: Mapped[TipoMetrica] = enum_column(TipoMetrica, nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False)

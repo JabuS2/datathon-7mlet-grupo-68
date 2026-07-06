@@ -51,12 +51,16 @@ async def start_cycle(body: RetrainCycleCreate, _: Operador, uow: UnitOfWork = D
 
 
 @router.post("/retrain-cycles/{run_id}/rollback", response_model=CicloRetreinoResponse)
-async def rollback(run_id: str, body: RollbackRequest, _: Operador, uow: UnitOfWork = Depends(get_uow)):
+async def rollback(
+    run_id: str, body: RollbackRequest, _: Operador, uow: UnitOfWork = Depends(get_uow)
+):
     return await GovernanceService(uow).rollback(run_id, body.to_policy_id)
 
 
 @router.post("/approvals", response_model=AprovacaoHumanaResponse)
-async def decide_approval(body: AprovacaoHumanaCreate, user: Operador, uow: UnitOfWork = Depends(get_uow)):
+async def decide_approval(
+    body: AprovacaoHumanaCreate, user: Operador, uow: UnitOfWork = Depends(get_uow)
+):
     return await GovernanceService(uow).decide_approval(body, user.id)
 
 

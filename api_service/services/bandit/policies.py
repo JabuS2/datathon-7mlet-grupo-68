@@ -67,7 +67,13 @@ class ThompsonPolicy(Policy):
             mean = s.alpha / (s.alpha + s.beta)
             reasons = ["policy:thompson", "cold_start" if s.n_pulls == 0 else "posterior"]
             ranked.append(
-                RankedArm(arm_id=s.arm_id, score=sample, pred=mean, bonus=sample - mean, reason_codes=reasons)
+                RankedArm(
+                    arm_id=s.arm_id,
+                    score=sample,
+                    pred=mean,
+                    bonus=sample - mean,
+                    reason_codes=reasons,
+                )
             )
         return sorted(ranked, key=lambda r: -r.score)
 
@@ -79,7 +85,7 @@ class ThompsonPolicy(Policy):
 
 
 class UCBPolicy(Policy):
-    """UCB1: média empírica + bônus de incerteza `c·sqrt(2·ln(N)/n_j)`. Braço não puxado = prioridade."""
+    """UCB1: média empírica + bônus `c·sqrt(2·ln(N)/n_j)`. Braço não puxado tem prioridade."""
 
     algorithm = AlgoritmoPolitica.UCB
 
@@ -90,15 +96,24 @@ class UCBPolicy(Policy):
         for s in states:
             if s.n_pulls == 0:
                 ranked.append(
-                    RankedArm(arm_id=s.arm_id, score=float("inf"), bonus=float("inf"),
-                              reason_codes=["policy:ucb", "cold_start"])
+                    RankedArm(
+                        arm_id=s.arm_id,
+                        score=float("inf"),
+                        bonus=float("inf"),
+                        reason_codes=["policy:ucb", "cold_start"],
+                    )
                 )
                 continue
             mean = s.sum_reward / s.n_pulls
             bonus = s.exploration_factor * float(np.sqrt(2.0 * log_total / s.n_pulls))
             ranked.append(
-                RankedArm(arm_id=s.arm_id, score=mean + bonus, pred=mean, bonus=bonus,
-                          reason_codes=["policy:ucb", _explore_or_exploit(bonus, mean)])
+                RankedArm(
+                    arm_id=s.arm_id,
+                    score=mean + bonus,
+                    pred=mean,
+                    bonus=bonus,
+                    reason_codes=["policy:ucb", _explore_or_exploit(bonus, mean)],
+                )
             )
         return sorted(ranked, key=lambda r: -r.score)
 
@@ -133,8 +148,19 @@ class LinUCBPolicy(Policy):
             pred = float(theta @ x)
             alpha = s.exploration_factor * self.scale
             bonus = alpha * float(np.sqrt(max(x @ A_inv @ x, 1e-9)))
-            reasons = ["policy:linucb", "cold_start" if s.n_pulls == 0 else _explore_or_exploit(bonus, pred)]
-            ranked.append(RankedArm(arm_id=s.arm_id, score=pred + bonus, pred=pred, bonus=bonus, reason_codes=reasons))
+            reasons = [
+                "policy:linucb",
+                "cold_start" if s.n_pulls == 0 else _explore_or_exploit(bonus, pred),
+            ]
+            ranked.append(
+                RankedArm(
+                    arm_id=s.arm_id,
+                    score=pred + bonus,
+                    pred=pred,
+                    bonus=bonus,
+                    reason_codes=reasons,
+                )
+            )
         return sorted(ranked, key=lambda r: -r.score)
 
     def update(self, state: ArmState, reward: float, x: np.ndarray) -> None:

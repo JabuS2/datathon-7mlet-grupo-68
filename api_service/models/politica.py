@@ -8,7 +8,7 @@ from models.columns import enum_column
 
 
 class Politica(Base):
-    """Versão de um algoritmo de decisão (baseline / thompson / ucb / linucb) e seus hiperparâmetros.
+    """Versão de um algoritmo de decisão (baseline/thompson/ucb/linucb) e hiperparâmetros.
 
     Permite versionar, comparar e promover/reverter políticas (Etapas 3/7). Mapeia o policy_store.
     """

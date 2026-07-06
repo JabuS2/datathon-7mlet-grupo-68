@@ -9,7 +9,7 @@ from models.columns import enum_column
 class User(BaseModel):
     """Autenticação unificada: operador (opera a plataforma) e cliente-demo (visitante da vitrine).
 
-    O campo `tipo` discrimina o papel; `cod_cliente`/`saldo_ficticio` só são preenchidos para 'demo'.
+    O campo `tipo` discrimina o papel; `cod_cliente`/`saldo_ficticio` só valem p/ 'demo'.
     """
 
     __tablename__ = "users"

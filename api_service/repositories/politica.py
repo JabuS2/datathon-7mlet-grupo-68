@@ -1,8 +1,8 @@
-from models.politica import Politica
-from repositories.base import BaseRepository
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from enums.politica import StatusPolitica
+from models.politica import Politica
+from repositories.base import BaseRepository
 
 
 class PoliticaRepository(BaseRepository[Politica]):

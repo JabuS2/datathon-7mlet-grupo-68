@@ -26,9 +26,13 @@ from services.catalog.loaders import (
 
 # Políticas semeadas: LinUCB é a ativa (catálogo prod); as demais nascem em shadow para a
 # comparação da Etapa 3 (baseline vs Thompson vs UCB vs contextual).
-SEED_POLICIES = [
-    ("baseline-v1", AlgoritmoPolitica.BASELINE, StatusPolitica.SHADOW,
-     {"rule": "best_expected_revenue"}),
+SEED_POLICIES: list[tuple[str, AlgoritmoPolitica, StatusPolitica, dict]] = [
+    (
+        "baseline-v1",
+        AlgoritmoPolitica.BASELINE,
+        StatusPolitica.SHADOW,
+        {"rule": "best_expected_revenue"},
+    ),
     ("thompson-v1", AlgoritmoPolitica.THOMPSON, StatusPolitica.SHADOW, {}),
     ("ucb-v1", AlgoritmoPolitica.UCB, StatusPolitica.SHADOW, {}),
     ("linucb-v1", AlgoritmoPolitica.LINUCB, StatusPolitica.ACTIVE, {"alpha_scale": 0.2}),
@@ -51,11 +55,15 @@ async def seed_all(
 
     counts = {
         "ofertas": await _seed_offers(uow, offers),
-        "segmentos": await _seed_segments(uow, load_segments_from_clients(golden / "golden_clients.csv")),
+        "segmentos": await _seed_segments(
+            uow, load_segments_from_clients(golden / "golden_clients.csv")
+        ),
         "politicas": 0,
         "estados_braco": 0,
         "clientes": await _seed_clients(uow, golden / "golden_clients.csv", client_limit),
-        "casos_avaliacao": await _seed_cases(uow, load_evaluation_cases(golden / "evaluation_cases.jsonl")),
+        "casos_avaliacao": await _seed_cases(
+            uow, load_evaluation_cases(golden / "evaluation_cases.jsonl")
+        ),
     }
     arm_ids = [o["arm_id"] for o in offers]
     counts["politicas"], counts["estados_braco"] = await _seed_policies(
@@ -89,7 +97,7 @@ async def _seed_policies(
     arm_inserted = 0
     for policy_id, algorithm, status, hyper in SEED_POLICIES:
         if await uow.politicas.get_by_policy_id(policy_id) is None:
-            hyperparams = {**hyper, "reward_definition": reward_definition}
+            hyperparams: dict = {**hyper, "reward_definition": reward_definition}
             uow.politicas.add(
                 Politica(
                     policy_id=policy_id,
@@ -100,7 +108,7 @@ async def _seed_policies(
                 )
             )
             pol_inserted += 1
-        # Priors por braço (cold-start): Thompson α=β=1; UCB zerado; LinUCB A/b nulos (init no serving).
+        # Priors por braço (cold-start): Thompson α=β=1; UCB zerado; LinUCB A/b nulos.
         for arm_id in arm_ids:
             if await uow.estados_braco.get(policy_id, arm_id) is None:
                 uow.estados_braco.add(EstadoBraco(policy_id=policy_id, arm_id=arm_id))
@@ -123,9 +131,7 @@ async def _seed_clients(uow: UnitOfWork, csv_path: Path, limit: int | None) -> i
 async def _seed_cases(uow: UnitOfWork, cases: list[dict]) -> int:
     inserted = 0
     for kwargs in cases:
-        if await uow.casos_avaliacao.get_by_field(
-            CasoAvaliacao.case_id, kwargs["case_id"]
-        ) is None:
+        if await uow.casos_avaliacao.get_by_field(CasoAvaliacao.case_id, kwargs["case_id"]) is None:
             uow.casos_avaliacao.add(CasoAvaliacao(**kwargs))
             inserted += 1
     return inserted

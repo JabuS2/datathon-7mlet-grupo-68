@@ -17,7 +17,10 @@ class CicloRetreino(Base):
 
     run_id: Mapped[str] = mapped_column(String(80), primary_key=True)
     policy_id: Mapped[str] = mapped_column(
-        String(60), ForeignKey("politicas.policy_id", ondelete="CASCADE"), nullable=False, index=True
+        String(60),
+        ForeignKey("politicas.policy_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     status: Mapped[StatusCicloRetreino] = enum_column(
         StatusCicloRetreino, nullable=False, default=StatusCicloRetreino.CANDIDATE

@@ -1,4 +1,5 @@
 """E10 — governança/MLOps: registro, approval gate, promoção, rollback, monitoramento + RBAC."""
+
 import pytest
 import pytest_asyncio
 
@@ -9,9 +10,8 @@ from settings import settings
 
 @pytest_asyncio.fixture
 async def seeded(session_factory):
-    async with session_factory() as s:
-        async with UnitOfWork(s) as uow:
-            await seed_all(uow, settings.DATA_DIR, client_limit=30)
+    async with session_factory() as s, UnitOfWork(s) as uow:
+        await seed_all(uow, settings.DATA_DIR, client_limit=30)
 
 
 async def _operador_headers(client) -> dict:
@@ -26,7 +26,9 @@ _NEW_POLICY = {"policyId": "linucb-v2", "version": "2.0", "algorithm": "linucb",
 @pytest.mark.asyncio
 async def test_policy_promotion_via_approval_gate(client, seeded):
     h = await _operador_headers(client)
-    assert (await client.post("/policies", json=_NEW_POLICY, headers=h)).json()["status"] == "shadow"
+    assert (await client.post("/policies", json=_NEW_POLICY, headers=h)).json()[
+        "status"
+    ] == "shadow"
 
     cycle = (await client.post("/retrain-cycles", json={"policyId": "linucb-v2"}, headers=h)).json()
     assert cycle["status"] == "candidate"
@@ -36,7 +38,9 @@ async def test_policy_promotion_via_approval_gate(client, seeded):
     )
     assert gate.status_code == 200
 
-    policies = {p["policyId"]: p["status"] for p in (await client.get("/policies", headers=h)).json()}
+    policies = {
+        p["policyId"]: p["status"] for p in (await client.get("/policies", headers=h)).json()
+    }
     assert policies["linucb-v2"] == "active"  # candidata promovida
     assert policies["linucb-v1"] == "retired"  # anterior aposentada (uma ativa por vez)
 
@@ -45,7 +49,9 @@ async def test_policy_promotion_via_approval_gate(client, seeded):
 async def test_rollback_restores_previous_policy(client, seeded):
     h = await _operador_headers(client)
     await client.post("/policies", json=_NEW_POLICY, headers=h)
-    run_id = (await client.post("/retrain-cycles", json={"policyId": "linucb-v2"}, headers=h)).json()["runId"]
+    run_id = (
+        await client.post("/retrain-cycles", json={"policyId": "linucb-v2"}, headers=h)
+    ).json()["runId"]
     await client.post("/approvals", json={"runId": run_id, "decision": "approve"}, headers=h)
 
     rb = await client.post(
@@ -54,7 +60,9 @@ async def test_rollback_restores_previous_policy(client, seeded):
     assert rb.status_code == 200
     assert rb.json()["status"] == "rolled_back"
 
-    policies = {p["policyId"]: p["status"] for p in (await client.get("/policies", headers=h)).json()}
+    policies = {
+        p["policyId"]: p["status"] for p in (await client.get("/policies", headers=h)).json()
+    }
     assert policies["linucb-v1"] == "active"
     assert policies["linucb-v2"] == "retired"
 

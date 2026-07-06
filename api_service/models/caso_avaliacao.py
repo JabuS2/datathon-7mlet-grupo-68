@@ -8,7 +8,7 @@ from models.columns import enum_column
 
 
 class CasoAvaliacao(Base):
-    """Exemplo do golden set (≥20 casos) — contexto + ação/recompensa esperadas + critério pass/fail.
+    """Caso do golden set (≥20): contexto + ação/recompensa esperadas + critério pass/fail.
 
     Mede a qualidade da política offline (Etapa 4). Origem: `evaluation_cases.jsonl`.
     """

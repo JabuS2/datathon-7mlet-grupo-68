@@ -11,6 +11,7 @@ import httpx
 import jwt
 import pytest
 import pytest_asyncio
+from alembic.config import Config
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
@@ -24,7 +25,6 @@ from sqlalchemy.pool import NullPool
 from testcontainers.postgres import PostgresContainer
 
 from alembic import command
-from alembic.config import Config
 from core.jwt_token import JwtToken
 from db.dependencies import get_db, get_uow
 from db.unit_of_work import UnitOfWork

@@ -18,7 +18,7 @@ class DecideRequest(BaseSchema):
 
 
 class DecideResponse(BaseSchema):
-    """Saída do `/decide`: o braço escolhido + justificativa + versão da política (log auditável)."""
+    """Saída do `/decide`: braço escolhido + justificativa + versão da política (auditável)."""
 
     decision_id: UUID
     arm_id: str

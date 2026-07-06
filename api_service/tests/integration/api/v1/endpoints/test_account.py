@@ -1,4 +1,5 @@
 """E12 — self-service: loga → vê conta/perfil → recebe sugestões → feedback/reward (com posse)."""
+
 import pytest
 import pytest_asyncio
 
@@ -9,9 +10,8 @@ from settings import settings
 
 @pytest_asyncio.fixture
 async def seeded(session_factory):
-    async with session_factory() as s:
-        async with UnitOfWork(s) as uow:
-            await seed_all(uow, settings.DATA_DIR, client_limit=60)
+    async with session_factory() as s, UnitOfWork(s) as uow:
+        await seed_all(uow, settings.DATA_DIR, client_limit=60)
 
 
 async def _onboard(client, email: str) -> dict:
@@ -55,7 +55,9 @@ async def test_full_self_service_journey(client, seeded):
     assert decision["armId"].startswith("OFF-")
     did = decision["decisionId"]
 
-    assert (await client.post("/me/feedback", json={"decisionId": did, "type": "click"}, headers=h)).status_code == 200
+    assert (
+        await client.post("/me/feedback", json={"decisionId": did, "type": "click"}, headers=h)
+    ).status_code == 200
     rw = await client.post("/me/reward", json={"decisionId": did, "converted": True}, headers=h)
     assert rw.status_code == 200 and rw.json()["status"] == "observed"
 
@@ -73,7 +75,9 @@ async def test_cannot_touch_other_users_decision(client, seeded):
     did = decision["decisionId"]
 
     # B tenta dar reward na decisão de A → 403 (posse)
-    resp = await client.post("/me/reward", json={"decisionId": did, "converted": True}, headers=b["headers"])
+    resp = await client.post(
+        "/me/reward", json={"decisionId": did, "converted": True}, headers=b["headers"]
+    )
     assert resp.status_code == 403
     assert resp.json()["code"] == "NOT_DECISION_OWNER"
 
@@ -86,7 +90,9 @@ async def test_me_requires_auth(client, seeded):
 @pytest.mark.asyncio
 async def test_operador_without_profile_gets_conflict(client, seeded):
     await client.post("/register", json={"email": "op@demo.com", "password": "segredo123"})
-    token = (await client.post("/login", json={"email": "op@demo.com", "password": "segredo123"})).json()["accessToken"]
+    token = (
+        await client.post("/login", json={"email": "op@demo.com", "password": "segredo123"})
+    ).json()["accessToken"]
     resp = await client.get("/me/profile", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 409
     assert resp.json()["code"] == "NO_CLIENT_PROFILE"

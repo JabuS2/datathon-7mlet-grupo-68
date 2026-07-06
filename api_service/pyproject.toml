@@ -57,7 +57,9 @@ select = [
     "RET",
     "RUF"
 ]
-ignore = ["B008"]
+# B008: Depends() em defaults (padrão FastAPI). RUF001-003: caracteres unicode "ambíguos"
+# são intencionais (acentuação PT-BR e notação matemática α/β/θ/→ em docstrings).
+ignore = ["B008", "RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.format]
 quote-style = "double"

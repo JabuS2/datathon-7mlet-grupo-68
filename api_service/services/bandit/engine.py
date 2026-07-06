@@ -49,7 +49,7 @@ class BanditEngine:
     def rank(
         self, client: Mapping[str, Any], policy: Policy, states: Sequence[ArmState]
     ) -> tuple[list[RankedArm], np.ndarray, dict]:
-        """Ranqueia as ofertas elegíveis. Devolve (ranking, vetor de contexto, contexto auditável)."""
+        """Ranqueia as ofertas elegíveis. Devolve (ranking, vetor de contexto, auditoria)."""
         renda_pct = self.stats.renda_percentile(client.get("renda_estimada_anual_brl"))
         eligible = set(eligible_arm_ids(client, self.offers_list, renda_pct))
         x = self.stats.context_vector(client)
@@ -67,13 +67,17 @@ class BanditEngine:
             return None
         top = ranked[0]
         reasons = [*top.reason_codes, f"eligible:{len(context['ofertas_elegiveis'])}"]
-        return Decision(arm_id=top.arm_id, score=top.score, reason_codes=reasons, context=context, ranked=ranked)
+        return Decision(
+            arm_id=top.arm_id, score=top.score, reason_codes=reasons, context=context, ranked=ranked
+        )
 
     # ── aprendizado ──────────────────────────────────────────────
     def reward_value(self, arm_id: str, click: float | int | bool) -> float:
         """Recompensa composta (receita+clique) do braço, para realimentar a política."""
         offer = self.offers.get(arm_id, {})
-        return composite_reward(offer.get("expected_revenue_brl", 0.0), click, self.reward_definition)
+        return composite_reward(
+            offer.get("expected_revenue_brl", 0.0), click, self.reward_definition
+        )
 
     def update(
         self, client: Mapping[str, Any], policy: Policy, state: ArmState, click: float | int | bool
@@ -96,7 +100,9 @@ class BanditEngine:
             expected_revenue_brl=float(offer.get("expected_revenue_brl", 0.0)),
         )
 
-    def _audit_context(self, client: Mapping[str, Any], renda_pct: float, eligible: list[str]) -> dict:
+    def _audit_context(
+        self, client: Mapping[str, Any], renda_pct: float, eligible: list[str]
+    ) -> dict:
         return {
             "features_numericas": {c: _num(client.get(c)) for c in self.stats.ctx_cols},
             "segmentos_sinteticos": sorted(_segments(client)),

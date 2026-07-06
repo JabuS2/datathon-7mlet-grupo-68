@@ -15,7 +15,8 @@ class EstadoBracoRepository(BaseRepository[EstadoBraco]):
         stmt = select(EstadoBraco).where(
             EstadoBraco.policy_id == policy_id, EstadoBraco.arm_id == arm_id
         )
-        return await self.session.scalar(stmt)
+        result: EstadoBraco | None = await self.session.scalar(stmt)
+        return result
 
     async def list_by_policy(self, policy_id: str) -> list[EstadoBraco]:
         return await self.filter(EstadoBraco.policy_id == policy_id)

@@ -17,7 +17,7 @@ from models.cliente import PRODUCT_FLAGS, Cliente
 from models.user import User
 from schemas.cliente import ClienteResponse, OnboardingRequest, OnboardingResponse
 
-# Faixa reservada de identificadores para perfis criados na vitrine (rastreáveis / purgáveis — LGPD).
+# Faixa reservada de ids p/ perfis criados na vitrine (rastreáveis / purgáveis — LGPD).
 DEMO_COD_BASE = 9_000_000
 
 
@@ -35,7 +35,9 @@ class OnboardingService:
             if template is None:
                 raise Conflict("Sem dados de seed para gerar o perfil", code="NO_SEED_DATA")
 
-            cod_cliente = self._next_demo_cod(await self.uow.clientes.max_cod_cliente(only_demo=True))
+            cod_cliente = self._next_demo_cod(
+                await self.uow.clientes.max_cod_cliente(only_demo=True)
+            )
             cliente = self._from_template(template, req, cod_cliente)
             self.uow.clientes.add(cliente)
 

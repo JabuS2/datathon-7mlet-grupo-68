@@ -16,7 +16,7 @@ class UserLogin(UserBase):
 
 
 class UserResponse(BaseSchema):
-    """Dados da conta do usuário logado. `cod_cliente`/`saldo_ficticio` só existem p/ `tipo='demo'`."""
+    """Conta do usuário logado. `cod_cliente`/`saldo_ficticio` existem só p/ `tipo='demo'`."""
 
     email: str
     tipo: TipoUsuario | None = None

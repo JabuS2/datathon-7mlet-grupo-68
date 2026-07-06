@@ -42,8 +42,11 @@ class GovernanceService:
             if await self.uow.politicas.get_by_policy_id(data.policy_id):
                 raise Conflict("Política já existe", code="POLICY_EXISTS")
             policy = Politica(
-                policy_id=data.policy_id, version=data.version, algorithm=data.algorithm,
-                hyperparams=data.hyperparams, status=StatusPolitica.SHADOW,
+                policy_id=data.policy_id,
+                version=data.version,
+                algorithm=data.algorithm,
+                hyperparams=data.hyperparams,
+                status=StatusPolitica.SHADOW,
             )
             self.uow.politicas.add(policy)
             await self._seed_arm_states(policy.policy_id)
@@ -75,8 +78,10 @@ class GovernanceService:
             if await self.uow.ciclos_retreino.get_by_run_id(run_id):
                 raise Conflict("run_id já existe", code="RUN_EXISTS")
             cycle = CicloRetreino(
-                run_id=run_id, policy_id=data.policy_id,
-                status=StatusCicloRetreino.CANDIDATE, metrics=data.metrics,
+                run_id=run_id,
+                policy_id=data.policy_id,
+                status=StatusCicloRetreino.CANDIDATE,
+                metrics=data.metrics,
             )
             self.uow.ciclos_retreino.add(cycle)
             await self.uow.session.flush()

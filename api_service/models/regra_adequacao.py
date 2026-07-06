@@ -8,7 +8,7 @@ from models.columns import enum_column
 
 
 class RegraAdequacao(Base):
-    """Regra de suitability que bloqueia ou exige revisão humana de uma oferta inadequada a um perfil.
+    """Regra de suitability que bloqueia ou exige revisão humana de oferta inadequada.
 
     Cobre o cenário de risco "violação de suitability" (Etapa 8).
     """
