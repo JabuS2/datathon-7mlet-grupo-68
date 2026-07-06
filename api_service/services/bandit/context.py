@@ -96,7 +96,7 @@ class ReferenceStats:
 def _client_segments(client: Mapping[str, Any]) -> set[str]:
     """Extrai os segmentos sintéticos do cliente (aceita list já parseada ou string JSON)."""
     raw = client.get("segmentos_sinteticos")
-    if isinstance(raw, (list, set, tuple)):
+    if isinstance(raw, list | set | tuple):
         return {str(x) for x in raw}
     if isinstance(raw, str) and raw.strip():
         import json
@@ -110,5 +110,5 @@ def _client_segments(client: Mapping[str, Any]) -> set[str]:
                 parsed = ast.literal_eval(raw)
             except (ValueError, SyntaxError):
                 return set()
-        return {str(x) for x in parsed} if isinstance(parsed, (list, set, tuple)) else set()
+        return {str(x) for x in parsed} if isinstance(parsed, list | set | tuple) else set()
     return set()
