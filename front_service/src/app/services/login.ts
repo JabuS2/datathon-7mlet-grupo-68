@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 
 @Service()
 export class Login {
-    private readonly _loginUrl = 'http://localhost:8008/api/v1/login';
+    private readonly _loginUrl = 'http://localhost:8001/api/v1/login';
     private http = inject(HttpClient);
 
     login(credentials: ILoginRequest): Observable<ILoginResponse> {
