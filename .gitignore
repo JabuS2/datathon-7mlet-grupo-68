@@ -22,6 +22,7 @@ build/
 *.pt
 *.onnx
 mlruns/
+mlflow.db
 
 # Node
 node_modules/
