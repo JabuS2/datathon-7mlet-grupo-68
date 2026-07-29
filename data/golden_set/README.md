@@ -22,11 +22,9 @@ Pasta de dados do sistema MAB: o catálogo de ofertas (braços) e a amostra de c
 | `version` | Versão do catálogo (ex.: `2.0.0`, `2.0.0-min`, `2.0.0-prod`). |
 | `n_arms` | Número de braços (ofertas) no catálogo. |
 | `description` | Descrição livre do catálogo / da versão. |
-| `reward_definition.type` | Tipo de recompensa (`composite`). |
-| `reward_definition.formula` | Fórmula da recompensa: `alpha*(expected_revenue_brl/v_max) + beta*conversion`. |
-| `reward_definition.alpha` | Peso do termo de **receita** na recompensa composta. |
-| `reward_definition.beta` | Peso do termo de **conversão/clique** na recompensa composta. |
-| `reward_definition.v_max` | Receita de referência para normalizar o termo de receita em [0,1]. |
+| `reward_definition.type` | Tipo de recompensa (`click`). |
+| `reward_definition.formula` | Fórmula da recompensa: `reward = click`. O evento de clique (0/1) do `/feedback` é o próprio reward. |
+| `reward_definition.note` | Observação: `expected_revenue_brl` é apenas metadado e **não** entra no reward; `valor_total`/`desconto_pct`/`valor_final` são apenas display. |
 | `data_source.golden_sample_file` | Caminho da amostra de clientes (`golden_clients.csv`). |
 | `data_source.full_dataset_file` | Caminho do dataset completo (`clientes_br_sintetico.csv`). |
 | `data_source.client_id_column` | Coluna identificadora do cliente (`cod_cliente`). |
@@ -43,7 +41,10 @@ Pasta de dados do sistema MAB: o catálogo de ofertas (braços) e a amostra de c
 | `category` | Categoria do produto: `credito`, `investimento` ou `seguro`. |
 | `product_name` | Nome do produto para exibição no front-end. |
 | `description` | Descrição curta do produto para o front-end. |
-| `expected_revenue_brl` | Receita esperada (R$) por conversão — termo de receita da recompensa composta. |
+| `expected_revenue_brl` | Receita esperada (R$) por conversão — **metadado**, não entra no reward (reward = click). |
+| `valor_total` | **Display**: preço/tarifa "cheio" da oferta (R$), antes do desconto promocional. |
+| `desconto_pct` | **Display**: percentual de desconto promocional aplicado sobre `valor_total`. |
+| `valor_final` | **Display**: valor final ao cliente = `round(valor_total * (1 - desconto_pct/100), 2)`. |
 | `context_features` | Lista de colunas do dataset usadas como vetor de contexto do LinUCB. |
 | `eligible_segment.synthetic_segment` | Segmento sintético "natural" do braço (só no catálogo completo). |
 | `eligible_segment.santander_filters` | Filtros de elegibilidade sobre o dataset (ver `filter_conventions`). |

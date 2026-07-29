@@ -4,12 +4,9 @@
     "n_arms": 10,
     "description": "Versão de produção",
     "reward_definition": {
-      "type": "composite",
-      "formula": "alpha * (expected_revenue_brl / v_max) + beta * click",
-      "alpha": 0.6,
-      "beta": 0.4,
-      "v_max": 7000,
-      "note": "click vem do evento real de feedback do front-end (/feedback)."
+      "type": "click",
+      "formula": "reward = click",
+      "note": "Reward simples: o evento de click (0/1) do /feedback ja e o proprio reward. expected_revenue_brl e apenas metadado e NAO entra no reward. valor_total/desconto_pct/valor_final sao apenas display para o front."
     },
     "linucb_note": "exploration_factor é escalado por 0.2 no LinUCB.",
     "filter_conventions": {
@@ -27,6 +24,9 @@
       "product_name": "Crédito Pessoal Pré-Aprovado",
       "description": "Dinheiro na conta em minutos, com taxa personalizada e sem burocracia.",
       "expected_revenue_brl": 1600,
+      "valor_total": 250.00,
+      "desconto_pct": 30,
+      "valor_final": 175.00,
       "context_features": [
         "idade",
         "renda_estimada_anual_brl",
@@ -55,6 +55,9 @@
       "product_name": "Cartão de Crédito Mais",
       "description": "Seu primeiro cartão sem anuidade, com limite que cresce com o uso.",
       "expected_revenue_brl": 920,
+      "valor_total": 300.00,
+      "desconto_pct": 40,
+      "valor_final": 180.00,
       "context_features": [
         "idade",
         "renda_estimada_anual_brl",
@@ -83,6 +86,9 @@
       "product_name": "Financiamento Imobiliário",
       "description": "Realize o sonho da casa própria com prazos longos e taxa competitiva.",
       "expected_revenue_brl": 6200,
+      "valor_total": 1200.00,
+      "desconto_pct": 15,
+      "valor_final": 1020.00,
       "context_features": [
         "idade",
         "renda_estimada_anual_brl",
@@ -113,6 +119,9 @@
       "product_name": "CDB Primeiros Passos",
       "description": "Comece a investir com pouco, rendendo mais que a poupança e com liquidez.",
       "expected_revenue_brl": 320,
+      "valor_total": 60.00,
+      "desconto_pct": 25,
+      "valor_final": 45.00,
       "context_features": [
         "idade",
         "renda_estimada_anual_brl",
@@ -140,6 +149,9 @@
       "product_name": "CDB Médio Prazo",
       "description": "Rentabilidade superior para reservas que você não vai usar tão cedo.",
       "expected_revenue_brl": 680,
+      "valor_total": 120.00,
+      "desconto_pct": 20,
+      "valor_final": 96.00,
       "context_features": [
         "idade",
         "renda_estimada_anual_brl",
@@ -168,6 +180,9 @@
       "product_name": "Previdência Privada PGBL",
       "description": "Planeje a aposentadoria e ainda abata até 12% da renda no Imposto de Renda.",
       "expected_revenue_brl": 2400,
+      "valor_total": 300.00,
+      "desconto_pct": 50,
+      "valor_final": 150.00,
       "context_features": [
         "idade",
         "renda_estimada_anual_brl",
@@ -196,6 +211,9 @@
       "product_name": "Fundo Multimercado",
       "description": "Gestão ativa em juros, câmbio e bolsa para diversificar a carteira.",
       "expected_revenue_brl": 1850,
+      "valor_total": 450.00,
+      "desconto_pct": 20,
+      "valor_final": 360.00,
       "context_features": [
         "idade",
         "renda_estimada_anual_brl",
@@ -223,6 +241,9 @@
       "product_name": "Seguro de Vida Familiar",
       "description": "Proteção financeira para quem você ama, com cobertura estendida à família.",
       "expected_revenue_brl": 680,
+      "valor_total": 80.00,
+      "desconto_pct": 25,
+      "valor_final": 60.00,
       "context_features": [
         "idade",
         "renda_estimada_anual_brl",
@@ -251,6 +272,9 @@
       "product_name": "Seguro Residencial",
       "description": "Proteja seu imóvel contra incêndio, roubo e danos elétricos.",
       "expected_revenue_brl": 420,
+      "valor_total": 49.90,
+      "desconto_pct": 20,
+      "valor_final": 39.92,
       "context_features": [
         "idade",
         "renda_estimada_anual_brl",
@@ -278,6 +302,9 @@
       "product_name": "Seguro Viagem",
       "description": "Cobertura médica e de bagagem para sua próxima viagem, nacional ou internacional.",
       "expected_revenue_brl": 240,
+      "valor_total": 40.00,
+      "desconto_pct": 15,
+      "valor_final": 34.00,
       "context_features": [
         "idade",
         "renda_estimada_anual_brl",
