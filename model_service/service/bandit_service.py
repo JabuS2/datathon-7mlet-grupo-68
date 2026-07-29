@@ -158,3 +158,16 @@ class BanditService:
     async def reset(self, algorithm: str | None) -> None:
         algo = self._resolve_algorithm(algorithm)
         await self.store.delete_state(algo)
+
+    async def snapshot_state(self, algorithm: str | None) -> dict[str, Any]:
+        """Retorna o estado atual do modelo (inicializando se necessário) — para o registry."""
+        algo = self._resolve_algorithm(algorithm)
+        cb = await self._ctx_builder()
+        model = await self._load_or_init(algo, cb.dim)
+        return model.get_state()
+
+    async def restore_state(self, algorithm: str | None, state: dict[str, Any]) -> None:
+        """Sobrescreve o estado do modelo no Redis (ex.: carregado do MLflow)."""
+        algo = self._resolve_algorithm(algorithm)
+        async with self.store.lock(algo):
+            await self.store.save_state(algo, state)

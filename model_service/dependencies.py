@@ -5,6 +5,7 @@ from functools import lru_cache
 from redis.asyncio import Redis, from_url
 
 from catalog import Catalog
+from registry import ModelRegistry
 from service import BanditService
 from settings import settings
 from store import StateStore
@@ -32,3 +33,8 @@ def get_store() -> StateStore:
 @lru_cache
 def get_service() -> BanditService:
     return BanditService(get_catalog(), get_store(), settings.DEFAULT_ALGORITHM)
+
+
+@lru_cache
+def get_registry() -> ModelRegistry:
+    return ModelRegistry(settings.MLFLOW_TRACKING_URI, settings.MLFLOW_EXPERIMENT_NAME)
