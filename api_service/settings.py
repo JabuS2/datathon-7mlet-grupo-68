@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:4200"]  # Rotas que podem acessar a API
     API_PORT: int = 8000
 
+    ### Model Service (bandits)
+    MODEL_SERVICE_URL: str = "http://localhost:8002"
+    DEFAULT_ALGORITHM: str = "linucb"
+
     ### Database Settings
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
