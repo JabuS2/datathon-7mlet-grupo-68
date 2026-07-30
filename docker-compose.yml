@@ -230,10 +230,13 @@ services:
       DD_APM_ENABLED: "true"
       DD_APM_NON_LOCAL_TRAFFIC: "true"
     volumes:
+      # Coleta de logs de containers precisa apenas do socket do Docker —
+      # funciona no Docker Desktop (Windows/Mac) e em host Linux.
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /proc/:/host/proc/:ro
-      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
-      - /opt/datadog-agent/run:/opt/datadog-agent/run:rw
+      # Mounts opcionais para métricas de infra do HOST (somente host Linux;
+      # descomente apenas nesse caso — no Docker Desktop podem falhar):
+      # - /proc/:/host/proc/:ro
+      # - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
     networks:
       - backend
     ports:
