@@ -65,19 +65,24 @@ class ModelRegistry:
 
     # ------------------------------------------------------------------ list
     def list_models(self) -> list[dict[str, Any]]:
-        """Lista os modelos registrados (usa search_registered_models — list_* é deprecado)."""
-        out: list[dict[str, Any]] = []
-        for rm in self.client.search_registered_models():
-            versions = self.client.search_model_versions(f"name='{rm.name}'")
-            out.append(
-                {
-                    "name": rm.name,
-                    "description": rm.description,
-                    "versions": sorted(int(v.version) for v in versions),
-                    "latest_version": max((int(v.version) for v in versions), default=None),
-                }
-            )
-        return out
+        """Lista os modelos registrados agregando por ``search_model_versions``.
+
+        Nota: derivamos a lista das *versões* (em vez de ``search_registered_models``)
+        porque o client MLflow mais novo não parseia corretamente a resposta de
+        ``registered-models/search`` do servidor 2.12.1 (descasamento de versão),
+        retornando vazio; ``search_model_versions`` funciona nesse par cliente/servidor.
+        """
+        by_name: dict[str, list[int]] = {}
+        for v in self.client.search_model_versions():
+            by_name.setdefault(v.name, []).append(int(v.version))
+        return [
+            {
+                "name": name,
+                "versions": sorted(versions),
+                "latest_version": max(versions),
+            }
+            for name, versions in sorted(by_name.items())
+        ]
 
     # ---------------------------------------------------------------- create
     def create_model(self, name: str) -> dict[str, Any]:
@@ -110,7 +115,10 @@ class ModelRegistry:
             _log_pyfunc(_BanditArtifact(), {"state": state_path}, registered_model_name=name)
         versions = self.client.search_model_versions(f"name='{name}'")
         latest = max(int(v.version) for v in versions)
-        logger.info("model_registered", extra={"name": name, "version": latest, "run": run.info.run_id})
+        logger.info(
+            "model_registered",
+            extra={"model_name": name, "version": latest, "run_id": run.info.run_id},
+        )
         return {"name": name, "version": latest, "run_id": run.info.run_id}
 
     # ------------------------------------------------------------------ load
