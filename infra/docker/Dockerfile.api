@@ -17,4 +17,6 @@ COPY api_service/ .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# ddtrace-run instrumenta a app para o Datadog. Sem DD_TRACE_ENABLED=true (default
+# do compose é false) ele não tenta conectar ao agent — não afeta itens 1-6.
+CMD ["ddtrace-run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

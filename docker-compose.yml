@@ -25,6 +25,14 @@ services:
       NEO4J_USER: ${NEO4J_USER}
       NEO4J_PASSWORD: ${NEO4J_PASSWORD}
       MODEL_SERVICE_URL: http://model:8000
+      # Datadog (tracing desligado por default; ligue com DD_TRACE_ENABLED=true no .env)
+      DD_TRACE_ENABLED: ${DD_TRACE_ENABLED:-false}
+      DD_AGENT_HOST: datadog-agent
+      DD_ENV: ${DD_ENV:-dev}
+      DD_SERVICE: api
+      DD_LOGS_INJECTION: "true"
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "python", "service": "api"}]'
     volumes:
       - ./data:/app/data
     depends_on:
@@ -53,6 +61,14 @@ services:
       CLIENTS_CSV_PATH: /app/data/golden_set/golden_clients.csv
       MLFLOW_TRACKING_URI: http://mlflow:5000
       MLFLOW_EXPERIMENT_NAME: datathon-mab
+      # Datadog
+      DD_TRACE_ENABLED: ${DD_TRACE_ENABLED:-false}
+      DD_AGENT_HOST: datadog-agent
+      DD_ENV: ${DD_ENV:-dev}
+      DD_SERVICE: model
+      DD_LOGS_INJECTION: "true"
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "python", "service": "model"}]'
     volumes:
       - ./data:/app/data
     depends_on:
@@ -194,6 +210,34 @@ services:
       - backend
     ports:
       - "5000:5000"
+
+  # ── Datadog Agent (observabilidade: logs + APM) ────────────
+  # Habilite com: docker-compose --profile api --profile datadog up -d
+  # Requer DD_API_KEY no .env (ver docs/observability-datadog.md).
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:7
+    profiles: ["datadog"]
+    restart: unless-stopped
+    environment:
+      DD_API_KEY: ${DD_API_KEY}
+      DD_SITE: ${DD_SITE:-datadoghq.com}
+      DD_ENV: ${DD_ENV:-dev}
+      # coleta de logs de todos os containers
+      DD_LOGS_ENABLED: "true"
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: "true"
+      DD_CONTAINER_EXCLUDE: "name:datadog-agent"
+      # APM (traces do ddtrace nas apps)
+      DD_APM_ENABLED: "true"
+      DD_APM_NON_LOCAL_TRAFFIC: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+      - /opt/datadog-agent/run:/opt/datadog-agent/run:rw
+    networks:
+      - backend
+    ports:
+      - "8126:8126"   # APM trace intake
 
 
 # ------------------------------------------------------------
