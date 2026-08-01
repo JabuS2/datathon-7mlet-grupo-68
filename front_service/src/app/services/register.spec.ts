@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { Register } from './register';
 import { IRegisterRequest, IRegisterResponse } from '../interfaces/iregister';
@@ -38,7 +38,7 @@ describe('Register', () => {
       expect(response).toEqual(mockResponse);
     });
 
-    const req = httpMock.expectOne('http://localhost:8008/api/v1/register');
+    const req = httpMock.expectOne('http://localhost:8001/api/v1/register');
 
     expect(req.request.method).toBe('POST');
 
@@ -52,5 +52,6 @@ describe('Register', () => {
 
   afterEach(() => {
     httpMock.verify();
+    TestBed.resetTestingModule();
   });
 });

@@ -10,7 +10,7 @@ async def _register_and_login(client, email: str, password: str = "supersecret12
     await client.post("/register", json=user_data.model_dump())
     resp = await client.post("/login", json=user_data.model_dump())
     assert resp.status_code == status.HTTP_200_OK
-    return resp.json()["accessToken"]
+    return str(resp.json()["accessToken"])
 
 
 async def _promote_to_admin(db_session, email: str) -> None:
