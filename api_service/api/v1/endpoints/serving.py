@@ -24,7 +24,7 @@ router = APIRouter(tags=["serving"])
 
 @router.post("/decide", response_model=DecideResponse)
 async def decide(body: DecideRequest, uow: UnitOfWork = Depends(get_uow)):
-    return await DecisionService(uow).decide(body.cod_cliente, body.channel)
+    return await DecisionService(uow).decide(body.cod_cliente, body.channel, body.arm_id)
 
 
 @router.post("/showcase", response_model=ShowcaseResponse)

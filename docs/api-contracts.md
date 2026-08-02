@@ -49,6 +49,11 @@ e `policyVersion`).
 ```
 `channel` ∈ `app | push | email | sms` (default `app`).
 
+`armId` é **opcional**: omitido, a política escolhe o topo do ranking; informado (vitrine
+clicável), registra a oferta que o usuário escolheu e acrescenta `user_selected` aos
+`reasonCodes` — o log distingue decisão da política de escolha do usuário. Braço fora do
+conjunto elegível devolve `409 ARM_NOT_ELIGIBLE`.
+
 **Response 200** (`DecideResponse`)
 ```json
 {
@@ -131,7 +136,7 @@ feedback/reward verificam a **posse** da decisão. É a jornada "loga → vê co
 | `GET` | `/me` | `UserResponse` | conta: `email`, `tipo`, `codCliente`, `saldoFicticio` |
 | `GET` | `/me/profile` | `ClienteResponse` | contexto do próprio cliente (`409 NO_CLIENT_PROFILE` se operador) |
 | `GET` | `/me/recommendations` | `ShowcaseResponse` | vitrine ranqueada do usuário (`?channel=&top_k=`) |
-| `POST` | `/me/decide` | `DecideResponse` | decide p/ o próprio cliente (`?channel=`) e registra o log |
+| `POST` | `/me/decide` | `DecideResponse` | decide p/ o próprio cliente (`?channel=`) e registra o log; corpo opcional `{ "armId": "..." }` para a vitrine clicável |
 | `POST` | `/me/feedback` | `FeedbackResponse` | clique — só na **própria** decisão (`403 NOT_DECISION_OWNER`) |
 | `POST` | `/me/reward` | `RewardResponse` | resultado — só na própria decisão |
 | `GET` | `/me/decisions` | `DecisaoResponse[]` | histórico das próprias decisões |

@@ -11,10 +11,24 @@ from schemas.base import BaseSchema
 
 
 class DecideRequest(BaseSchema):
-    """Entrada do `/decide`: quem é o cliente e em qual canal decidir."""
+    """Entrada do `/decide`: quem é o cliente e em qual canal decidir.
+
+    `arm_id` opcional serve a vitrine clicável: quando informado, registra a oferta que o
+    usuário escolheu na lista em vez de deixar a política escolher.
+    """
 
     cod_cliente: int
     channel: Canal = Canal.APP
+    arm_id: str | None = None
+
+
+class MeDecideRequest(BaseSchema):
+    """Corpo (opcional) do `/me/decide`: só a oferta escolhida na vitrine.
+
+    Sem corpo — ou com `armId` nulo — a política decide, que é o fluxo de oferta única.
+    """
+
+    arm_id: str | None = None
 
 
 class DecideResponse(BaseSchema):

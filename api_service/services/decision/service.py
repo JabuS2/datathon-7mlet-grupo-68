@@ -28,6 +28,7 @@ from schemas.decisao import (
     RewardResponse,
     ShowcaseResponse,
 )
+from services.bandit.engine import ArmNotEligible
 from services.bandit.policies import build_policy
 from services.bandit.state import ArmState
 from services.decision.runtime import get_runtime
@@ -60,7 +61,8 @@ class DecisionService:
         self.rt = get_runtime()
 
     # ── /decide ──────────────────────────────────────────────────
-    async def decide(self, cod_cliente: int, channel) -> DecideResponse:
+    async def decide(self, cod_cliente: int, channel, arm_id: str | None = None) -> DecideResponse:
+        """Registra uma decisão. Com `arm_id`, serve o braço escolhido na vitrine clicável."""
         async with self.uow:
             client = await self._require_client(cod_cliente)
             policy = await self._require_active_policy()
@@ -72,7 +74,13 @@ class DecisionService:
                 policy.algorithm, dimension=self.rt.stats.dimension, hyperparams=policy.hyperparams
             )
 
-            decision = self.rt.engine.decide(_client_to_dict(client), pol, states)
+            try:
+                decision = self.rt.engine.decide(_client_to_dict(client), pol, states, arm_id)
+            except ArmNotEligible as err:
+                raise Conflict(
+                    f"Oferta {err.arm_id} não é elegível para este cliente",
+                    code="ARM_NOT_ELIGIBLE",
+                ) from err
             if decision is None:
                 raise Conflict("Nenhuma oferta elegível para o cliente", code="NO_ELIGIBLE_ARM")
 

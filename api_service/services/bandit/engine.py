@@ -24,6 +24,14 @@ from services.bandit.state import ArmState, RankedArm
 PROTECTED_ATTRIBUTES = ["sexo"]
 
 
+class ArmNotEligible(Exception):
+    """Braço pedido explicitamente não está entre os elegíveis para o cliente."""
+
+    def __init__(self, arm_id: str):
+        self.arm_id = arm_id
+        super().__init__(f"Braço {arm_id} não é elegível para este cliente")
+
+
 @dataclass
 class Decision:
     arm_id: str
@@ -59,14 +67,36 @@ class BanditEngine:
         return ranked, x, self._audit_context(client, renda_pct, sorted(eligible))
 
     def decide(
-        self, client: Mapping[str, Any], policy: Policy, states: Sequence[ArmState]
+        self,
+        client: Mapping[str, Any],
+        policy: Policy,
+        states: Sequence[ArmState],
+        arm_id: str | None = None,
     ) -> Decision | None:
-        """Escolhe o melhor braço elegível. `None` se nenhum braço é elegível."""
+        """Escolhe o braço a servir. `None` se nenhum braço é elegível.
+
+        Sem `arm_id`, vence o topo do ranking — a decisão é da política. Com `arm_id`
+        (vitrine clicável), serve o braço que o usuário escolheu, desde que elegível, e marca
+        `user_selected` nos reason codes: o log precisa distinguir o que a política escolheu do
+        que o usuário escolheu, senão a auditoria credita à política uma decisão que não foi dela.
+
+        Levanta `ArmNotEligible` se o braço pedido não está no conjunto elegível.
+        """
         ranked, _x, context = self.rank(client, policy, states)
         if not ranked:
             return None
-        top = ranked[0]
-        reasons = [*top.reason_codes, f"eligible:{len(context['ofertas_elegiveis'])}"]
+
+        if arm_id is None:
+            top = ranked[0]
+            extra = []
+        else:
+            found = next((r for r in ranked if r.arm_id == arm_id), None)
+            if found is None:
+                raise ArmNotEligible(arm_id)
+            top = found
+            extra = ["user_selected"]
+
+        reasons = [*top.reason_codes, f"eligible:{len(context['ofertas_elegiveis'])}", *extra]
         return Decision(
             arm_id=top.arm_id, score=top.score, reason_codes=reasons, context=context, ranked=ranked
         )

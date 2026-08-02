@@ -175,23 +175,56 @@ GET /api/v1/me/recommendations?top_k=5&channel=app
 `top_k` vai de 1 a 10 (padrão 5). Repare que os parâmetros de query são **snake_case** (`top_k`),
 diferente do corpo JSON.
 
-### ⚠️ A pegadinha
+### Vitrine clicável: como atribuir o clique à oferta certa
 
-`GET /me/recommendations` **não devolve `decisionId`** — ela não registra nada, é só leitura.
-E `POST /me/decide` **escolhe o braço sozinho**: não aceita `armId` no request.
+`GET /me/recommendations` **não devolve `decisionId`** — ela não grava nada, é só leitura. Quem
+cria o `decisionId` é sempre o `POST /me/decide`.
 
-Consequência prática: **se você listar 5 ofertas e o usuário clicar na terceira, não há como
-registrar o clique daquela oferta.** O `/me/decide` devolveria a primeira.
+Para a lista clicável, chame `/me/decide` **no momento do clique**, informando qual oferta o
+usuário escolheu:
 
-Dois desenhos coerentes:
+```http
+POST /api/v1/me/decide?channel=app
+```
+```json
+{ "armId": "OFF-SEG-003" }
+```
 
-**A. Oferta única (recomendado)** — a home chama `/me/decide` e mostra **uma** oferta em
-destaque, com "Tenho interesse" / "Agora não". O ciclo fecha certo e é o que demonstra o bandit
-aprendendo. A lista de `/me/recommendations` entra como seção secundária *"outras ofertas"*,
-apenas informativa, sem botões de ação.
+A resposta é a mesma do fluxo sem corpo, com `armId` igual ao que você mandou e um reason code
+a mais:
 
-**B. Lista clicável** — exige mudança no backend (`/me/decide` aceitar `armId`, ou o showcase
-persistir decisões). **Fale com o backend antes de assumir esse desenho.**
+```json
+{
+  "decisionId": "9f21c4de-...",
+  "armId": "OFF-SEG-003",
+  "productName": "Seguro Viagem",
+  "reasonCodes": ["policy:linucb", "cold_start", "eligible:7", "user_selected"],
+  "policyVersion": "linucb-v1"
+}
+```
+
+O `user_selected` existe porque o log precisa distinguir o que a **política** escolheu do que o
+**usuário** escolheu — sem isso a auditoria creditaria à política uma decisão que não foi dela.
+
+**Erro específico:** `409 ARM_NOT_ELIGIBLE` se o `armId` não estiver no conjunto elegível daquele
+cliente. Como você monta a lista a partir de `/me/recommendations`, isso não deve acontecer no
+caminho feliz — se acontecer, é estado velho em tela: recarregue as recomendações.
+
+### Os dois desenhos possíveis
+
+**A. Oferta única** — a home chama `/me/decide` **sem corpo**, a política escolhe, você mostra
+uma oferta em destaque com "Tenho interesse" / "Agora não". Mais fiel ao bandit.
+
+**B. Vitrine clicável** — você lista com `/me/recommendations`, o usuário escolhe, e você chama
+`/me/decide` **com `armId`**. Mais natural como app.
+
+Dá para combinar: destaque via `/me/decide` sem corpo + lista abaixo com `armId` no clique.
+
+> **Nota de modelagem (vale saber):** no desenho B a decisão só é registrada no clique, então as
+> ofertas que apareceram na lista mas não foram clicadas **não** geram impressão nem recompensa.
+> O modelo aprende só sobre a clicada. Está correto e é suficiente para a demo; se um dia
+> quiserem medir taxa de clique por posição da lista, aí sim é preciso registrar impressão para
+> todos os itens exibidos.
 
 ---
 
@@ -284,6 +317,8 @@ auditado. Serve para um "minhas recomendações anteriores" ou para a tela de tr
 
 ## Resumo do ciclo
 
+**Oferta única:**
+
 ```
 POST /onboarding              → accessToken (não use /register!)
    ↓
@@ -297,6 +332,22 @@ POST /me/reward               → { decisionId, converted: true|false }   [model
 POST /me/decide               → próxima oferta, já com o aprendizado
 ```
 
+**Vitrine clicável:**
+
+```
+POST /onboarding                    → accessToken
+   ↓
+GET  /me/recommendations?top_k=5    → lista para renderizar (sem decisionId)
+   ↓  usuário clica no card da 3ª oferta
+POST /me/decide  { armId: "OFF-..." } → decisionId   [reason code: user_selected]
+   ↓
+POST /me/feedback  { decisionId, type: "click" }
+   ↓  usuário decide
+POST /me/reward    { decisionId, converted: true|false }   [modelo aprende]
+   ↓
+GET  /me/recommendations            → lista reordenada pelo aprendizado
+```
+
 ## Tabela de erros
 
 | Código | `code` | O que fazer no front |
@@ -306,6 +357,7 @@ POST /me/decide               → próxima oferta, já com o aprendizado
 | 403 | `NOT_DECISION_OWNER` | bug de estado — o `decisionId` não é do usuário logado |
 | 403 | `ROLE_NOT_ALLOWED` | rota de operador; esconda do cliente |
 | 404 | `DECISION_NOT_FOUND` | `decisionId` inválido ou expirado do estado local |
+| 409 | `ARM_NOT_ELIGIBLE` | `armId` fora do conjunto elegível — recarregue `/me/recommendations` |
 | 409 | `NO_CLIENT_PROFILE` | conta criada por `/register` — precisa vir do `/onboarding` |
 | 409 | `NO_ELIGIBLE_ARM` | estado vazio: "nenhuma oferta disponível agora" |
 | 409 | `EMAIL_EXISTS` | "e-mail já cadastrado" |

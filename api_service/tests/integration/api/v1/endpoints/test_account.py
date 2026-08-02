@@ -89,6 +89,61 @@ async def test_me_requires_auth(client, seeded):
 
 
 @pytest.mark.asyncio
+async def test_clickable_showcase_attributes_click_to_chosen_offer(client, seeded):
+    """Vitrine clicável: o usuário escolhe da lista e o clique é atribuído àquela oferta."""
+    h = (await _onboard(client, "clicador@demo.com"))["headers"]
+
+    recs = (await client.get("/me/recommendations?top_k=5", headers=h)).json()["items"]
+    assert len(recs) >= 2
+    escolhida = recs[1]["armId"]  # de propósito NÃO é a que a política colocaria em 1º
+
+    decision = (
+        await client.post("/me/decide", json={"armId": escolhida}, headers=h)
+    ).json()
+    assert decision["armId"] == escolhida
+    assert "user_selected" in decision["reasonCodes"]
+
+    did = decision["decisionId"]
+    assert (
+        await client.post("/me/feedback", json={"decisionId": did, "type": "click"}, headers=h)
+    ).status_code == 200
+    assert (
+        await client.post("/me/reward", json={"decisionId": did, "converted": True}, headers=h)
+    ).status_code == 200
+
+    # o log auditável registra a oferta clicada, não o topo do ranking
+    historico = (await client.get("/me/decisions", headers=h)).json()
+    assert historico[0]["chosenArmId"] == escolhida
+    assert "user_selected" in historico[0]["reasonCodes"]
+
+
+@pytest.mark.asyncio
+async def test_decide_without_body_still_lets_policy_choose(client, seeded):
+    """Regressão: o corpo é opcional — quem já chamava sem body não pode quebrar."""
+    h = (await _onboard(client, "semcorpo@demo.com"))["headers"]
+
+    decision = (await client.post("/me/decide", headers=h)).json()
+    assert decision["armId"].startswith("OFF-")
+    assert "user_selected" not in decision["reasonCodes"]
+
+
+@pytest.mark.asyncio
+async def test_decide_rejects_ineligible_arm(client, seeded):
+    """Escolher da lista não vira brecha: braço fora do conjunto elegível é barrado."""
+    h = (await _onboard(client, "espertinho@demo.com"))["headers"]
+
+    recs = (await client.get("/me/recommendations?top_k=10", headers=h)).json()
+    elegiveis = {i["armId"] for i in recs["items"]}
+    todas = {o["armId"] for o in (await client.get("/offers", headers=h)).json()}
+    inelegiveis = todas - elegiveis
+    assert inelegiveis, "cenário exige ao menos uma oferta inelegível para este perfil"
+
+    resp = await client.post("/me/decide", json={"armId": inelegiveis.pop()}, headers=h)
+    assert resp.status_code == 409
+    assert resp.json()["code"] == "ARM_NOT_ELIGIBLE"
+
+
+@pytest.mark.asyncio
 async def test_offers_hides_bandit_internals_from_demo(client, seeded):
     """A vitrine não expõe receita esperada, fator de exploração nem regras de elegibilidade.
 
