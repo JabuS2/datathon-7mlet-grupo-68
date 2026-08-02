@@ -5,20 +5,21 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-RUN pip install --upgrade pip
+COPY --from=ghcr.io/astral-sh/uv:0.11.32 /uv /uvx /usr/local/bin/
 
 COPY pyproject.toml ./
-RUN pip install \
-    "fastapi>=0.115,<0.116" \
-    "uvicorn[standard]>=0.30" \
-    "deepagents>=0.6,<0.7" \
-    "langchain-openai>=1.3,<2" \
-    "langchain-mcp-adapters>=0.3,<0.4" \
-    "ag-ui-langgraph>=0.0.42,<0.1" \
-    "PyJWT[crypto]>=2.9" \
-    "pydantic>=2.9" \
-    "pydantic-settings>=2.4" \
-    "python-dotenv>=1.0"
+RUN uv pip install --system \
+    "fastapi==0.115.14" \
+    "uvicorn[standard]==0.52.0" \
+    "deepagents==0.6.12" \
+    "langchain-openai==1.4.1" \
+    "langchain-mcp-adapters==0.3.1" \
+    "mcp==1.29.0" \
+    "ag-ui-langgraph==0.0.42" \
+    "PyJWT[crypto]==2.13.0" \
+    "pydantic==2.13.4" \
+    "pydantic-settings==2.14.2" \
+    "python-dotenv==1.2.2"
 
 COPY agent_service ./agent_service
 

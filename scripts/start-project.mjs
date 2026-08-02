@@ -52,12 +52,6 @@ const SERVICES = [
     items: [
       { name: "pgAdmin", url: "http://localhost:5050", link: true, wait: false, desc: "Postgres admin UI",
         creds: () => [["Email", cred("PGADMIN_EMAIL", "admin@datathon.com")], ["Password", cred("PGADMIN_PASSWORD")]] },
-      { name: "OpenSearch Dashboards", url: "http://localhost:5601", link: true, wait: false, desc: "OpenSearch UI",
-        creds: () => [["User", "admin"], ["Password", cred("OPENSEARCH_ADMIN_PASSWORD")]] },
-      { name: "OpenSearch", url: "https://localhost:9200", link: true, wait: false, desc: "Self-signed cert — expect a browser warning",
-        creds: () => [["User", "admin"], ["Password", cred("OPENSEARCH_ADMIN_PASSWORD")]] },
-      { name: "Neo4j Browser", url: "http://localhost:7474", link: true, wait: false, desc: "Graph DB browser · connect URL bolt://localhost:7687",
-        creds: () => [["User", cred("NEO4J_USER", "neo4j")], ["Password", cred("NEO4J_PASSWORD")]] },
     ],
   },
   {
