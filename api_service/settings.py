@@ -65,7 +65,12 @@ class Settings(BaseSettings):
     NEO4J_USER: str = "neo4j"
     NEO4J_PASSWORD: str = "neo4j_password"
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    # `extra="ignore"`: o .env da raiz é compartilhado com agent_service / mcp_server /
+    # dashboard / pgAdmin. Sem isso o pydantic-settings rejeita (extra_forbidden) toda chave
+    # que não seja campo desta classe e o backend não sobe com um .env real.
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     @property
     def is_production(self) -> bool:
