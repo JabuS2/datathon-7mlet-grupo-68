@@ -17,7 +17,7 @@ class BaseSchema(BaseModel):
         alias_generator=to_camel,
         from_attributes=True,
         extra="forbid",
-        populate_by_name=True
+        populate_by_name=True,
     )
 
     @classmethod
@@ -27,7 +27,8 @@ class BaseSchema(BaseModel):
     @classmethod
     def fakes(cls, count: int, **kwargs: Any) -> list[Self]:
         return [cls.fake(**kwargs) for _ in range(count)]
-    
+
+
 class AuditSchema(BaseSchema):
     created_at: datetime | None = None
     created_by: str | None = None

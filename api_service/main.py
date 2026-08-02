@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -5,6 +7,8 @@ from fastapi.responses import JSONResponse
 from api.v1.routes import router
 from exceptions import AppException
 from settings import settings
+
+logger = logging.getLogger("hp_invest")
 
 app = FastAPI(
     title=settings.PROJECT_NAME, version=settings.VERSION, description=settings.DESCRIPTION
@@ -14,9 +18,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
@@ -29,6 +32,7 @@ async def app_exception_handler(request: Request, exc: AppException):
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Erro não tratado em %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500, content={"error": "Internal server error", "code": "INTERNAL_ERROR"}
     )

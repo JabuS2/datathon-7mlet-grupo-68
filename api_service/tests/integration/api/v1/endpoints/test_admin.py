@@ -23,8 +23,12 @@ async def _promote_to_admin(db_session, email: str) -> None:
 
 @pytest.mark.asyncio
 async def test_users_overview_requires_authentication(client):
+    # Credencial ausente é 401 (não 403): o `bearer_scheme` usa auto_error=False e a
+    # ausência de token vira MISSING_TOKEN. 403 fica reservado para "autenticado,
+    # mas sem permissão" — ver test_users_overview_forbidden_for_non_admin.
     resp = await client.get("/admin/users/overview")
-    assert resp.status_code == status.HTTP_403_FORBIDDEN
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+    assert resp.json()["code"] == "MISSING_TOKEN"
 
 
 @pytest.mark.asyncio
