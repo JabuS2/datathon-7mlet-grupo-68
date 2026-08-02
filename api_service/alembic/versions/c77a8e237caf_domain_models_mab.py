@@ -1,9 +1,13 @@
 """domain models mab
 
 Revision ID: c77a8e237caf
-Revises: 0548fa41ad4c
+Revises: a1b2c3d4e5f6
 Create Date: 2026-07-05 21:43:25.351113
 
+Nota: originalmente derivava de 0548fa41ad4c. No merge com a main, `a1b2c3d4e5f6`
+(add_is_admin_to_users) passou a ocupar esse ponto, então esta revisão foi
+reencadeada para logo depois dela — evita as duas cabeças que travariam o
+`alembic upgrade head`.
 """
 
 from collections.abc import Sequence
@@ -15,7 +19,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "c77a8e237caf"
-down_revision: str | Sequence[str] | None = "0548fa41ad4c"
+down_revision: str | Sequence[str] | None = "a1b2c3d4e5f6"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

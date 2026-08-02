@@ -81,12 +81,24 @@ def require_role(*allowed: TipoUsuario):
     return _guard
 
 
-# Guarda comum: rotas de governança/admin exigem operador (um cliente-demo nunca aprova política).
+# Guarda comum: rotas de governança exigem operador (um cliente-demo nunca aprova política).
 require_operador = require_role(TipoUsuario.OPERADOR)
+
+
+async def get_current_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
+    """Privilégio administrativo da plataforma — ortogonal ao `tipo` do domínio MAB.
+
+    `require_operador` responde "pode operar o bandit?"; esta guarda responde
+    "pode administrar a plataforma?" (visão geral de usuários, dashboard).
+    """
+    if not user.is_admin:
+        raise Forbidden(code="ADMIN_REQUIRED", message="Acesso restrito a administradores")
+    return user
 
 
 class AuthDependencies:
     """Mantido por compatibilidade — delega para as funções de módulo."""
 
     get_current_user = staticmethod(get_current_user)
+    get_current_admin = staticmethod(get_current_admin)
     require_operador = staticmethod(require_operador)

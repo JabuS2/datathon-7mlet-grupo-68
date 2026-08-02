@@ -1,0 +1,42 @@
+site_name: datathon-7mlet-grupo-68
+site_description: HP Invest — backend, frontend e Admin Assistant
+repo_url: https://github.com/andrevberaldo/datathon-7mlet-grupo-68
+docs_dir: docs
+
+theme:
+  name: material
+  language: pt-BR
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Arquitetura:
+      - Admin Assistant: architecture/admin-assistant.md
+  - Serviços:
+      - api_service: services/api-service.md
+      - front_service: services/front-service.md
+      - agent_service: services/agent-service.md
+      - mcp_server: services/mcp-server.md
+      - dashboard: services/dashboard.md
+  - Infraestrutura: infra.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - toc:
+      permalink: true

@@ -20,5 +20,6 @@ class UserResponse(BaseSchema):
 
     email: str
     tipo: TipoUsuario | None = None
+    is_admin: bool | None = None
     cod_cliente: int | None = None
     saldo_ficticio: float | None = None

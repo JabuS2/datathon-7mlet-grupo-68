@@ -1,4 +1,4 @@
-.PHONY: install infra migrate seed reproduce api test lint down
+.PHONY: install infra migrate seed reproduce api test lint down run start-project
 
 API_DIR = api_service
 
@@ -38,3 +38,12 @@ lint:
 # Derruba a infraestrutura.
 down:
 	docker-compose down
+
+run:
+	docker-compose up --build
+
+# Interactively fill in the required env vars (writes repo-root .env), bring the
+# whole stack up in Docker (infra + api + app: mcp_server/agent_service/dashboard
+# /front_service), then generate and open an HTML page listing every service URL.
+start-project:
+	@node scripts/start-project.mjs

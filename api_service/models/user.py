@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Float, ForeignKey, String
+from sqlalchemy import BigInteger, Boolean, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from enums.usuario import TipoUsuario
@@ -9,7 +9,10 @@ from models.columns import enum_column
 class User(BaseModel):
     """Autenticação unificada: operador (opera a plataforma) e cliente-demo (visitante da vitrine).
 
-    O campo `tipo` discrimina o papel; `cod_cliente`/`saldo_ficticio` só valem p/ 'demo'.
+    Dois eixos independentes de autorização:
+      - `tipo`     → papel no domínio MAB (`operador` decide/governa, `demo` só o próprio perfil);
+      - `is_admin` → privilégio administrativo da plataforma (visão geral de usuários, dashboard).
+    `cod_cliente`/`saldo_ficticio` só valem p/ 'demo'.
     """
 
     __tablename__ = "users"
@@ -22,6 +25,9 @@ class User(BaseModel):
         nullable=False,
         default=TipoUsuario.OPERADOR,
         server_default=TipoUsuario.OPERADOR.value,
+    )
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", default=False
     )
     # Preenchido só quando tipo='demo' (perfil sintético anexado ao cadastro da vitrine).
     cod_cliente: Mapped[int | None] = mapped_column(
