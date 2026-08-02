@@ -296,7 +296,7 @@ produção controlada (Etapa 7).
 |---|---|
 | `run_id` (PK) | str |
 | `policy_id` (FK) | → `politica` (candidata) |
-| `status` | enum (candidate / approved / promoted / rolled_back) |
+| `status` | enum (candidate / approved / **rejected** / promoted / rolled_back) |
 | `metrics` | json |
 | `created_at` | datetime |
 

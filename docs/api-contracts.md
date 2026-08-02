@@ -105,7 +105,8 @@ Realimenta o bandit; pode chegar **atrasado** (`status="pending"` até observar 
 
 | Método | Rota | Response | Papel |
 |---|---|---|---|
-| `GET` | `/offers` | `OfertaResponse[]` | catálogo dos 10 braços |
+| `GET` | `/offers` | `OfertaPublica[]` | vitrine: 10 braços, sem parâmetros do bandit |
+| `GET` | `/offers/catalog` | `OfertaResponse[]` | catálogo interno (receita, elegibilidade) — **operador** |
 | `GET` | `/segments` | `SegmentoResponse[]` | segmentos sintéticos |
 | `POST` | `/onboarding` | `OnboardingResponse` | cadastro demo (perfil template §6) |
 | `GET` | `/clients/{codCliente}` | `ClienteResponse` | contexto do cliente |
@@ -134,7 +135,7 @@ feedback/reward verificam a **posse** da decisão. É a jornada "loga → vê co
 | `POST` | `/me/feedback` | `FeedbackResponse` | clique — só na **própria** decisão (`403 NOT_DECISION_OWNER`) |
 | `POST` | `/me/reward` | `RewardResponse` | resultado — só na própria decisão |
 | `GET` | `/me/decisions` | `DecisaoResponse[]` | histórico das próprias decisões |
-| `GET` | `/offers` | `OfertaResponse[]` | catálogo das 10 ofertas |
+| `GET` | `/offers` | `OfertaPublica[]` | vitrine das 10 ofertas (`armId`, nome, descrição, categoria) |
 | `GET` | `/segments` | `SegmentoResponse[]` | segmentos sintéticos |
 
 > As rotas cruas `/decide`,`/showcase`,`/feedback`,`/reward` (sem `/me`) permanecem como

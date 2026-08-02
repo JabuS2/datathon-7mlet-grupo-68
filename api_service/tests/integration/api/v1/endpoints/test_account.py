@@ -41,9 +41,10 @@ async def test_full_self_service_journey(client, seeded):
     assert profile.status_code == 200
     assert profile.json()["codCliente"] == cod
 
-    # 3) catálogo de ofertas
+    # 3) vitrine de ofertas — sem parâmetros internos do bandit
     offers = (await client.get("/offers", headers=h)).json()
     assert len(offers) == 10
+    assert set(offers[0]) == {"armId", "productName", "description", "category"}
 
     # 4) recebe sugestões (sem passar cod_cliente — vem do token)
     recs = (await client.get("/me/recommendations", headers=h)).json()
@@ -85,6 +86,39 @@ async def test_cannot_touch_other_users_decision(client, seeded):
 @pytest.mark.asyncio
 async def test_me_requires_auth(client, seeded):
     assert (await client.get("/me/profile")).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_offers_hides_bandit_internals_from_demo(client, seeded):
+    """A vitrine não expõe receita esperada, fator de exploração nem regras de elegibilidade.
+
+    Regressão: `/offers` servia `OfertaResponse` a qualquer autenticado, entregando ao próprio
+    cliente a régua comercial (`expectedRevenueBrl`) e como burlar o filtro (`eligibleSegment`).
+    """
+    h = (await _onboard(client, "curioso@demo.com"))["headers"]
+    interno = {"expectedRevenueBrl", "ucbExplorationFactor", "contextFeatures", "eligibleSegment"}
+
+    offers = (await client.get("/offers", headers=h)).json()
+    assert all(interno.isdisjoint(o) for o in offers)
+
+    # e a rota interna é barrada para o demo
+    resp = await client.get("/offers/catalog", headers=h)
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "ROLE_NOT_ALLOWED"
+
+
+@pytest.mark.asyncio
+async def test_offers_catalog_exposes_internals_to_operador(client, seeded):
+    await client.post("/register", json={"email": "cat@demo.com", "password": "segredo123"})
+    token = (
+        await client.post("/login", json={"email": "cat@demo.com", "password": "segredo123"})
+    ).json()["accessToken"]
+
+    resp = await client.get("/offers/catalog", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 10
+    assert "expectedRevenueBrl" in resp.json()[0]
+    assert "eligibleSegment" in resp.json()[0]
 
 
 @pytest.mark.asyncio
