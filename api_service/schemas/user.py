@@ -16,3 +16,4 @@ class UserLogin(UserBase):
 
 class UserResponse(BaseSchema):
     email: str
+    is_admin: bool | None = None

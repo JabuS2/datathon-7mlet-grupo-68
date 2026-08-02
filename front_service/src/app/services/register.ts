@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 
 @Service()
 export class Register {
-    private readonly _registerUrl = 'http://localhost:8008/api/v1/register';
+    private readonly _registerUrl = 'http://localhost:8001/api/v1/register';
     private http = inject(HttpClient);
 
     register(credentials: IRegisterRequest): Observable<IRegisterResponse> {

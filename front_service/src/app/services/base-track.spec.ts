@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { BaseTrack } from './base-track';
 
@@ -49,5 +49,9 @@ describe('BaseTrack', () => {
     subject.error(new Error('erro'));
 
     expect(service.loading()).toBe(false);
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 });

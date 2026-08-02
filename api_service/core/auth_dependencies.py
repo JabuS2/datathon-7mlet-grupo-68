@@ -7,7 +7,7 @@ from jwt import ExpiredSignatureError, InvalidTokenError
 
 from db.dependencies import get_uow
 from db.unit_of_work import UnitOfWork
-from http_exceptions import NotFound, Unauthorized
+from http_exceptions import Forbidden, NotFound, Unauthorized
 from repositories.user import UserRepository
 from settings import settings
 
@@ -77,5 +77,20 @@ class AuthDependencies:
 
         if not user:
             raise NotFound(message="Usuário não encontrado", code="USER_NOT_FOUND")
+
+        return user
+
+    async def get_current_admin(
+        self,
+        token: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
+        uow: Annotated[UnitOfWork, Depends(get_uow)],
+    ):
+        user = await self.get_current_user(token, uow)
+
+        if not getattr(user, "is_admin", False):
+            raise Forbidden(
+                code="ADMIN_REQUIRED",
+                message="Acesso restrito a administradores",
+            )
 
         return user
