@@ -58,3 +58,6 @@ data/processed/*.csv
 data/processed/*.parquet
 data/synthetic_enrichment/*.csv
 data/synthetic_enrichment/*.parquet
+
+# MkDocs build output
+site/

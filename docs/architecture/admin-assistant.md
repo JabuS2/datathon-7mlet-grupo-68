@@ -1,67 +1,68 @@
-# Admin Assistant Architecture
+# Arquitetura do Admin Assistant
 
-An admin-facing assistant: admins chat in a CopilotKit (AG-UI) frontend, a
-LangChain **deep agent** decides what to do, and a **JavaScript MCP server**
-exposes tools and dashboard widgets (`mcpApp`). The assistant's main job is to
-**render dashboards** by calling MCP tools that return MCP-UI resources, which
-CopilotKit renders inline.
+Um assistente voltado a administradores: admins conversam em um frontend
+CopilotKit (AG-UI), um **deep agent** LangChain decide o que fazer, e um
+**MCP server em JavaScript** expõe tools e widgets de dashboard (`mcpApp`).
+A principal função do assistente é **renderizar dashboards**, chamando tools
+MCP que retornam recursos MCP-UI, os quais o CopilotKit renderiza inline.
 
-## Components
+## Componentes
 
-| Service         | Stack                        | Port  | Responsibility                                                     |
-| --------------- | ---------------------------- | ----- | ----------------------------------------------------------------- |
-| `apps/dashboard`| Next.js + CopilotKit (AG-UI) | 3000  | Admin login, chat UI, renders MCP-UI widgets                      |
-| `agent_service` | Python, deepagents + AG-UI   | 8100  | Deep agent (OpenAI), serves AG-UI endpoint, loads MCP tools       |
-| `mcp_server`    | Node/TypeScript, MCP + mcp-ui| 8200  | Exposes tools + `mcpApp` widgets, proxies admin data              |
-| `api_service`   | FastAPI + Postgres           | 8000/8001 | Auth (JWT), admin data (`/admin/users/overview`)              |
+| Serviço          | Stack                         | Porta | Responsabilidade                                                   |
+| ---------------- | ------------------------------ | ----- | ------------------------------------------------------------------ |
+| `apps/dashboard`  | Next.js + CopilotKit (AG-UI)   | 3000  | Login do admin, UI de chat, renderiza widgets MCP-UI                |
+| `agent_service`   | Python, deepagents + AG-UI     | 8100  | Deep agent (OpenAI), serve o endpoint AG-UI, carrega tools MCP      |
+| `mcp_server`      | Node/TypeScript, MCP + mcp-ui  | 8200  | Expõe tools + widgets `mcpApp`, faz proxy dos dados administrativos |
+| `api_service`     | FastAPI + Postgres              | 8000/8001 | Autenticação (JWT), dados administrativos (`/admin/users/overview`) |
 
-## Request flow
+## Fluxo de uma requisição
 
 ```
-Admin browser (CopilotKit provider, admin JWT)
-  │  POST /api/copilotkit  (Next.js route: CopilotRuntime + AG-UI HttpAgent)
+Navegador do admin (provider CopilotKit, JWT admin)
+  │  POST /api/copilotkit  (rota Next.js: CopilotRuntime + AG-UI HttpAgent)
   ▼
-agent_service  ── AdminAuthMiddleware validates the admin JWT (shared SECRET_KEY)
-  │  LangChain deep agent (OpenAI model)
-  │  MCP client (langchain-mcp-adapters, streamable HTTP)
+agent_service  ── AdminAuthMiddleware valida o JWT admin (SECRET_KEY compartilhado)
+  │  Deep agent LangChain (modelo OpenAI)
+  │  Cliente MCP (langchain-mcp-adapters, streamable HTTP)
   ▼
-mcp_server  ── get_users_overview tool
-  │  forwards Authorization ▼
-api_service  GET /api/v1/admin/users/overview  (get_current_admin guard)
-  ▲  KPI JSON
-mcp_server  ── builds MCP-UI resource (self-contained HTML widget) + JSON
+mcp_server  ── tool get_users_overview
+  │  encaminha o Authorization ▼
+api_service  GET /api/v1/admin/users/overview  (guard get_current_admin)
+  ▲  JSON de KPIs
+mcp_server  ── constrói o recurso MCP-UI (widget HTML autocontido) + JSON
   ▲
-agent_service ── streams tool result over AG-UI
+agent_service ── transmite o resultado da tool via AG-UI
   ▲
 dashboard  ── useCopilotAction("get_users_overview") → <UIResourceRenderer>
 ```
 
-## Authentication & authorization
+## Autenticação e autorização
 
-- **api_service** issues JWTs (`/login`) and exposes `is_admin` on `/me`. The
-  `/admin/*` routes require `get_current_admin` (403 for non-admins).
-- **dashboard** stores the JWT (localStorage), only lets admins in, and forwards
-  the JWT to `/api/copilotkit`, which passes it to `agent_service`.
-- **agent_service** validates the JWT signature/expiry at the edge
-  (`SECRET_KEY`/`ALGORITHM` shared with api_service).
-- **Downstream data access:** the agent forwards `DOWNSTREAM_API_TOKEN` to the
-  MCP server, which passes it to api_service; admin authorization is enforced
-  there. Full per-user token forwarding end-to-end is a planned enhancement.
+- **api_service** emite os JWTs (`/login`) e expõe `is_admin` em `/me`. As
+  rotas `/admin/*` exigem `get_current_admin` (403 para não-admins).
+- **dashboard** guarda o JWT (localStorage), só deixa admins entrarem, e
+  encaminha o JWT para `/api/copilotkit`, que o repassa ao `agent_service`.
+- **agent_service** valida a assinatura/expiração do JWT na borda
+  (`SECRET_KEY`/`ALGORITHM` compartilhados com o api_service).
+- **Acesso a dados downstream:** o agent encaminha `DOWNSTREAM_API_TOKEN`
+  para o MCP server, que o repassa ao api_service; a autorização de admin é
+  aplicada lá. O encaminhamento completo do token por usuário, ponta a
+  ponta, é uma melhoria planejada.
 
 ## Widgets (`mcpApp`)
 
-MCP tools return an **MCP-UI resource** built with `@mcp-ui/server`
-(`createUIResource`, `ui://mcp-server/<widget>`). Data is embedded into the HTML
-so the sandboxed iframe is self-contained. The frontend renders it with
-`@mcp-ui/client`'s `UIResourceRenderer`. Add widgets in
-`mcp_server/src/widgets/` and register them in `registry.ts`.
+As tools MCP retornam um **recurso MCP-UI** construído com `@mcp-ui/server`
+(`createUIResource`, `ui://mcp-server/<widget>`). Os dados são embutidos no
+HTML para que o iframe sandboxed seja autocontido. O frontend renderiza com
+o `UIResourceRenderer` do `@mcp-ui/client`. Novos widgets vão em
+`mcp_server/src/widgets/` e são registrados em `registry.ts`.
 
-## Running locally
+## Rodando localmente
 
-Each service has its own README. With Docker Compose (opt-in profiles):
+Cada serviço tem seu próprio README. Com Docker Compose (perfis opt-in):
 
 ```bash
-cp .env.example .env    # set OPENAI_API_KEY, DOWNSTREAM_API_TOKEN, SECRET_KEY
+cp .env.example .env    # definir OPENAI_API_KEY, DOWNSTREAM_API_TOKEN, SECRET_KEY
 docker compose --profile api --profile app up --build
 ```
 
@@ -70,5 +71,5 @@ docker compose --profile api --profile app up --build
 - MCP server: http://localhost:8200/mcp
 - API: http://localhost:8001
 
-Or run each service directly (see `apps/dashboard/README.md`,
+Ou rode cada serviço diretamente (veja `apps/dashboard/README.md`,
 `agent_service/README.md`, `mcp_server/README.md`, `api_service/README.md`).
