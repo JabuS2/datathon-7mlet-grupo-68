@@ -17,7 +17,6 @@ alembic = "^1.13.3"
 
 numpy = "^2.1.0"
 
-asyncpg = "^0.29.0"
 psycopg = { version = "^3.2.0", extras = ["binary"] }
 psycopg2-binary = "^2.9.12"
 
@@ -27,6 +26,7 @@ argon2-cffi = "^25.1.0"
 pydantic = "^2.9.0"
 pydantic-settings = "^2.4.0"
 python-dotenv = "^1.0.1"
+asyncpg = "^0.31.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.0"

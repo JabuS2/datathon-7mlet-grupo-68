@@ -1,0 +1,20 @@
+<app-sidebar />
+
+<div class="ml-[280px] min-h-screen bg-[#f9f9f9]">
+  <app-topbar />
+  <main class="max-w-[1440px] mx-auto px-6 lg:px-10 pt-20 pb-10">
+    @if (profile(); as profile) {
+      <app-profile-header [profile]="profile" />
+      <app-hero-metrics [profile]="profile" />
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 my-6">
+        <app-income-card class="xl:col-span-4" [profile]="profile" />
+        <app-profile-card class="xl:col-span-4" [profile]="profile" />
+        <app-products-card class="xl:col-span-4" [profile]="profile" />
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 my-6">
+        <app-transactions class="xl:col-span-8" />
+        <app-purchase-summary class="xl:col-span-4" />
+      </div>
+    }
+  </main>
+</div>
