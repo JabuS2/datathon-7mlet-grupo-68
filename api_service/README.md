@@ -3,9 +3,10 @@
 Plataforma de experimentação adaptativa com Multi-Armed Bandit para recomendação de produtos financeiros.
 
 **Dataset:** Santander Product Recommendation (Kaggle)  
-**Algoritmos:** Thompson Sampling · Nilos-UCB · LinUCB contextual · Baseline determinístico  
-**Frontends:** HP Invest (cliente final) · Dashboard operacional  
-**Assistente:** LLM com RAG sobre políticas internas sintéticas
+**Algoritmos:** LinUCB contextual (ativo) · Thompson Sampling · Baseline determinístico  
+**Recompensa:** binária (clique/conversão)  
+**Frontends:** HP Invest / `front_service` (cliente final) · `apps/dashboard` (assistente admin)  
+**Assistente:** agente LangChain + MCP (`agent_service` + `mcp_server`)
 
 ---
 
@@ -139,65 +140,60 @@ make test                   # rodar testes
 
 ## Arquitetura
 
-Arquitetura em 3 camadas (Layered Architecture):
-- **interface/** — FastAPI, CLI, Streamlit, Assistente LLM
-- **services/** — lógica de negócio pura, sem imports de framework
-- **data/** — adaptadores: loaders, event store, policy store, vector store
+O `api_service` segue camadas: `api/` (FastAPI) → `services/` (regra de negócio) →
+`repositories/` + `models/` (persistência), com `UnitOfWork` controlando a transação.
+A regra central: nada em `services/` importa FastAPI.
 
-A regra central: nenhum arquivo em `services/` importa FastAPI, Streamlit ou banco de dados. Isso garante testabilidade e separação de responsabilidades.
+O bandit existe hoje em **dois lugares** — o in-process (`services/bandit` + `services/decision`,
+estado na tabela `estados_braco`) que atende `/decide`, `/showcase` e `/me/*`, e o
+`model_service` (Redis + MLflow) que atende `/offers` e `/feedback`. Consolidar os dois é
+decisão em aberto; ver `docs/backend-roadmap.md`.
 
 ## Mapa de pastas
 
 ```
 datathon-7mlet-grupo-68/
 │
-├── src/                            # Backend Python
-│   ├── interface/                  # Camada de entrada
-│   │   ├── api/                    # FastAPI — /decide /reward /experiments /audit
-│   │   ├── cli/                    # Typer — simulate, evaluate, retrain
-│   │   ├── assistant/              # LLM chat + RAG
-│   │   └── dashboard/              # Streamlit — demo operacional
-│   ├── services/                   # Lógica de negócio pura
-│   │   ├── bandit/                 # Thompson Sampling, UCB, LinUCB, baseline
-│   │   ├── evaluation/             # Golden set, métricas, fairness
-│   │   ├── retrain/                # Drift, approval gate, rollback
-│   │   ├── audit/                  # Audit logger, reason codes
-│   │   └── rag/                    # RAG service, embedder, retriever
-│   └── data/                       # Adaptadores de dados
-│       ├── loader/                 # Santander, sintético, catálogo
-│       ├── event_store/            # Impressões e rewards
-│       ├── policy_store/           # Versionamento de política
-│       └── vector_store/           # ChromaDB para RAG
+├── api_service/                    # esta API (FastAPI + Postgres)
+│   ├── api/v1/endpoints/           # auth, offers, feedback, serving, account,
+│   │                               # catalog, governance, admin, demo, health
+│   ├── services/
+│   │   ├── bandit/                 # políticas (linucb/thompson/baseline), contexto,
+│   │   │                           # elegibilidade, engine
+│   │   ├── decision/               # serving: liga o engine ao banco + log auditável
+│   │   ├── governance/             # políticas, ciclos de retreino, aprovações, métricas
+│   │   ├── offer/                  # ofertas/feedback via model_service
+│   │   ├── account/ demo/ dashboard/ catalog/ seed/
+│   │   └── model_client.py         # cliente HTTP do model_service
+│   ├── models/ repositories/ schemas/ enums/
+│   ├── alembic/                    # migrações
+│   └── tests/                      # unit / integration / e2e
 │
-├── apps/                           # Frontends React (Vite)
-│   ├── hp-invest/                  # Experiência do cliente final
-│   └── dashboard/                  # Painel operacional + chat LLM
+├── model_service/                  # bandits: /rank, /update, registry MLflow
+│   ├── models/                     # linucb, thompson, baseline, context
+│   ├── store/                      # StateStore (Redis)
+│   └── registry/                   # MLflow model registry
 │
-├── data/                           # Camadas de dados (PDF Etapas 1-2)
-│   ├── kaggle/README.md            # Fonte, versão, licença
-│   ├── processed/                  # Dataset limpo — 1,35 M linhas × 46 colunas
-│   ├── synthetic_enrichment/       # Dataset BR sintético (col. em PT-BR, renda em BRL)
-│   ├── golden_set/                 # offer_catalog.json · golden_clients.csv · README.md
-│   └── rag_corpus/                 # 10 documentos de política sintética
+├── front_service/                  # portal do cliente (Angular)
+├── apps/dashboard/                 # assistente admin (Next + CopilotKit)
+├── agent_service/                  # agente LangChain
+├── mcp_server/                     # servidor MCP (tools/widgets)
 │
-├── docs/                           # Documentação obrigatória (PDF Etapa 8)
-│   ├── model-card.md
-│   ├── system-card.md
-│   ├── lgpd-plan.md
-│   ├── architecture/               # architecture-azure.md + ADRs
-│   └── governance/                 # fairness-report, risk-scenarios
+├── data/
+│   ├── kaggle/                     # fonte, versão, licença (só README)
+│   ├── processed/                  # vazio
+│   ├── synthetic_enrichment/       # vazio
+│   ├── golden_set/                 # offer_catalog.json · golden_clients.csv
+│   └── rag_corpus/                 # vazio
 │
-├── reports/                        # Relatório técnico e data-generation
-├── tests/                          # unit / integration / e2e
-├── notebooks/                      # EDA, simulação, demo day
-├── infra/
-│   ├── docker/                     # Dockerfiles por serviço
-│   └── scripts/                    # setup-local, seed-data, simulate
-├── .github/workflows/ci.yml        # CI — lint + test no push
+├── docs/                           # mkdocs (ver mkdocs.yml)
+├── notebooks/                      # EDA, exploração MAB, simulação LinUCB
+├── scripts/                        # reproduce.py, seed_db.py, smoke_e2e.ps1
+├── infra/docker/                   # Dockerfiles + entrypoint
+├── infra/k8s/                      # helm chart (só da api por enquanto)
+├── .github/workflows/              # ci.yml, docs.yml
 ├── docker-compose.yml
-├── Makefile
-├── pyproject.toml
-└── .env.example
+└── Makefile
 ```
 
 ## Catálogo de ofertas (`data/golden_set/offer_catalog.json`)

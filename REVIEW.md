@@ -1,4 +1,11 @@
-# Revisao Tecnica do Repositorio
+# Revisao Tecnica do Repositorio — SNAPSHOT HISTORICO
+
+> **Documento historico, nao vale como descricao do repositorio atual.**
+> Foi escrito em 2026-06-05, quando o backend vivia em `src/` e so tinha
+> `health`/`register`/`login`/`me`. Desde entao o pacote virou `api_service/`,
+> entrou o dominio MAB completo, o `model_service`, os frontends e o assistente.
+> Os caminhos de arquivo citados abaixo em sua maioria nao existem mais.
+> Para o estado atual, veja `README.md`, `docs/index.md` e `docs/backend-roadmap.md`.
 
 Data da analise: 2026-06-05
 

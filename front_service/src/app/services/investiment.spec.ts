@@ -42,7 +42,7 @@ describe('Investiment', () => {
       expect(response).toEqual(mockResponse);
     });
 
-    const request = httpMock.expectOne('http://localhost:8008/api/v1/offers');
+    const request = httpMock.expectOne('http://localhost:8001/api/v1/offers');
 
     expect(request.request.method).toBe('GET');
     request.flush(mockResponse);

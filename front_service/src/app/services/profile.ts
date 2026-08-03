@@ -2,10 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { IProfileResponse } from '../interfaces/iprofile';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from '../core/api';
 
 @Service()
 export class Profile {
-  private readonly _profileUrl = 'http://localhost:8008/api/v1/me/profile';
+  private readonly _profileUrl = `${API_BASE_URL}/me/profile`;
   private http = inject(HttpClient);
 
   me(): Observable<IProfileResponse> {

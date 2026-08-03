@@ -71,7 +71,7 @@ conjunto elegível devolve `409 ARM_NOT_ELIGIBLE`.
 **Erros:** `404` cliente inexistente; `409`/`422` sem braço elegível.
 
 ### `POST /showcase` — vitrine ranqueada
-Devolve as ofertas elegíveis **ordenadas** pelo score UCB (o que o front-end monta como vitrine).
+Devolve as ofertas elegíveis **ordenadas** pelo score da política ativa (LinUCB por default).
 
 **Request** (`ShowcaseRequest`): `{ "codCliente": 100870, "channel": "app", "topK": 5 }`
 
@@ -87,15 +87,21 @@ Devolve as ofertas elegíveis **ordenadas** pelo score UCB (o que o front-end mo
 }
 ```
 
-### `POST /feedback` — evento de clique/impressão
-Registra o evento observado após a decisão (o **clique** alimenta o termo `beta` do reward
-composto `0.6·receita/vmax + 0.4·clique`).
+### `POST /me/feedback` — evento de clique/impressão
+Registra o evento observado após a decisão. O clique é o **único** sinal de recompensa.
+
+> A rota crua `POST /feedback` foi cedida ao fluxo novo (`endpoints/feedback.py`, via
+> model_service), que espera `{ "armId": …, "clicked": … }`. Para o evento atrelado a uma
+> decisão auditável, use `/me/feedback`.
 
 **Request** (`FeedbackRequest`): `{ "decisionId": "b1f2…", "type": "click" }`
 **Response 200** (`FeedbackResponse`): `{ "eventId": "…", "decisionId": "b1f2…", "type": "click", "occurredAt": "…Z" }`
 
 ### `POST /reward` — resultado (adoção do produto)
 Realimenta o bandit; pode chegar **atrasado** (`status="pending"` até observar a transição 0→1).
+
+A recompensa é **binária** e derivada pelo serviço: `1.0` se houve clique ou conversão, `0.0`
+caso contrário. O chamador não arbitra o valor — `RewardRequest` não tem campo `value`.
 
 **Request** (`RewardRequest`): `{ "decisionId": "b1f2…", "converted": true }`
 **Response 200** (`RewardResponse`): `{ "rewardId": "…", "decisionId": "b1f2…", "value": 0.71, "status": "observed" }`

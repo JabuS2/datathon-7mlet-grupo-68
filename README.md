@@ -1,12 +1,22 @@
 # datathon-7mlet-grupo-68
 
-Plataforma de investimentos (HP Invest) com backend FastAPI, frontend Angular
-e um assistente administrativo baseado em agentes (LangChain + MCP +
-CopilotKit). Veja `docs/architecture/admin-assistant.md` para o desenho
-detalhado do assistente e os READMEs de cada serviço (`api_service/`,
-`front_service/`, `agent_service/`, `mcp_server/`, `apps/dashboard/`) para
-como rodar cada peça isoladamente. Infraestrutura local via Docker Compose
-(`docker-compose.yml`) e Kubernetes (`infra/k8s/`).
+Plataforma de investimentos (HP Invest) com backend FastAPI, serviço de modelos
+(multi-armed bandits) separado, frontend Angular e um assistente administrativo
+baseado em agentes (LangChain + MCP + CopilotKit).
+
+| Serviço | O que é | Porta (compose) |
+|---|---|---|
+| `api_service/` | API de negócio: auth, catálogo, serving, governança | 8001 |
+| `model_service/` | Bandits (`/rank`, `/update`) + registry MLflow; estado em Redis | 8002 |
+| `front_service/` | Portal do cliente (Angular) | 4200 |
+| `apps/dashboard/` | UI do assistente administrativo (Next + CopilotKit) | 3000 |
+| `agent_service/` | Agente LangChain que orquestra as tools do MCP | 8100 |
+| `mcp_server/` | Servidor MCP que expõe a API como tools/widgets | 8200 |
+
+Veja `docs/architecture/admin-assistant.md` para o desenho detalhado do
+assistente e os READMEs de cada serviço para como rodar cada peça
+isoladamente. Infraestrutura local via Docker Compose (`docker-compose.yml`)
+e Kubernetes (`infra/k8s/`).
 
 ## Tecnologias de Nuvem
 
@@ -22,10 +32,13 @@ single-instance no `docker-compose.yml`, ganhariam resiliência real com
 falha; dados e artefatos hoje presos em volumes locais (`./data`) passariam
 para **S3**, desacoplando-os do ciclo de vida dos containers.
 
-Como o fluxo de uma requisição já atravessa quatro serviços (dashboard →
+O fluxo de uma requisição já atravessa quatro serviços (dashboard →
 agent_service → mcp_server → api_service, ver
-`docs/architecture/admin-assistant.md`) sem nenhuma stack de observabilidade
-central hoje — cada serviço loga isoladamente — a operação em nuvem exigiria
+`docs/architecture/admin-assistant.md`). Hoje `api_service` e `model_service`
+emitem log estruturado em JSON e traces via ddtrace, coletados por um agente
+Datadog opcional no compose (`--profile datadog`, ver
+`docs/observability-datadog.md`); `agent_service`, `mcp_server` e os frontends
+ainda logam isoladamente. Em nuvem, a operação exigiria
 **CloudWatch** para centralizar logs e métricas de todos os pods no EKS,
 **CloudWatch Container Insights** para visibilidade de cluster/pod, e
 tracing distribuído (**X-Ray** ou OpenTelemetry) para acompanhar uma
