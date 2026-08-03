@@ -370,3 +370,73 @@ Todo erro vem no mesmo formato:
 ```
 
 Use o `code` na lógica (é estável) e o `error` na tela.
+
+---
+
+## Como subir a API para desenvolver contra ela
+
+```bash
+docker compose up -d postgres
+cd api_service && alembic upgrade head
+python ../scripts/seed_db.py --client-limit 200      # catálogo, políticas, clientes
+uvicorn main:app --reload --port 8001
+```
+
+Swagger em `http://localhost:8001/docs`. Sem o seed, `/onboarding` responde
+`409 NO_SEED_DATA` e `/me/decide` responde `409 NO_ACTIVE_POLICY` — os dois são falta de dado,
+não bug.
+
+---
+
+## Estado do `front_service` e o que falta construir
+
+Levantamento feito em 02/08/2026. **Do lado da API a jornada está completa e validada ponta a
+ponta**; o que falta é tela.
+
+### Já existe e funciona
+
+| Peça | Onde | Observação |
+|---|---|---|
+| Guarda de token | `services/auth.ts` | `accessToken`/`tokenType` em `localStorage`, exposto como signal |
+| Injeção do header | `core/http-interceptor.ts` | põe `Authorization` em toda request — **não monte header à mão** |
+| Proteção de rota | `guard/auth-guard.ts` | `canActivate` bloqueia sem token |
+| Login | `components/login/` | chama `/login`, salva o token e navega |
+
+A base de autenticação está pronta. Quem escrever as telas novas só consome os endpoints.
+
+### Falta
+
+**1. Nenhuma tela da jornada existe.** Os componentes são `login`, `register` e `admin` — e o
+`admin` é casca (`admin.html` = `<p>admin works!</p>`). Não há tela de oferta, vitrine ou
+histórico.
+
+**2. O cadastro aponta para o endpoint errado.** `services/register.ts` posta em `/register`,
+que cria conta **sem perfil de cliente**: todo `/me/*` depois responde `409 NO_CLIENT_PROFILE`.
+Tem de ir para `/onboarding`, que pede dois campos a mais (`idade`, `segmento`) e já devolve o
+`accessToken` — dispensa o `/login` seguinte e o redirect para a tela de login.
+
+**3. O login manda todo mundo para `/admin`.** `components/login/login.ts` navega fixo. Deveria
+ramificar pelo `tipo` que vem do `GET /me`: `demo` → home de ofertas, `operador` → backoffice.
+
+**4. Não há tratamento de expiração.** O token dura **30 minutos** e a API **não tem refresh
+token**. O `utils/error-handler.ts` só exibe a mensagem; um `401` no meio da sessão vira um toast
+confuso. Trate `401` no interceptor: limpar token e redirecionar para `/login`.
+
+### Caminho mínimo
+
+```
+services/mab.ts           → onboarding, recommendations, decide, feedback, reward
+components/onboarding/    → email, senha, idade, segmento   → POST /onboarding
+components/home/          → ofertas + clique + "tenho interesse" / "agora não"
+```
+
+Mais três ajustes pequenos: `register` apontando para `/onboarding`, redirect do login por
+`tipo`, e o `401` do interceptor.
+
+### Decisão de layout a tomar antes
+
+Os dois desenhos da seção *"Os dois desenhos possíveis"* estão implementados na API. Escolha
+qual construir **antes** de começar a tela — muda a estrutura inteira:
+
+- **oferta única** — `POST /me/decide` sem corpo, uma oferta em destaque, dois botões;
+- **vitrine clicável** — `GET /me/recommendations` lista, `POST /me/decide {armId}` no clique.
