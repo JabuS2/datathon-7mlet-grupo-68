@@ -19,6 +19,7 @@ from schemas.decisao import (
     DecisaoResponse,
     FeedbackRequest,
     FeedbackResponse,
+    MeDecideRequest,
     RewardRequest,
     RewardResponse,
     ShowcaseResponse,
@@ -52,9 +53,15 @@ async def my_decision(
     user: CurrentUser,
     uow: UnitOfWork = Depends(get_uow),
     channel: Canal = Canal.APP,
+    body: MeDecideRequest | None = None,
 ):
+    """Registra a decisão do usuário logado.
+
+    Sem corpo, a política escolhe (oferta única). Com `{"armId": "..."}`, registra a oferta
+    que o usuário clicou na vitrine — o corpo é opcional para não quebrar quem já chama sem ele.
+    """
     cod = AccountService.require_cod_cliente(user)
-    return await DecisionService(uow).decide(cod, channel)
+    return await DecisionService(uow).decide(cod, channel, body.arm_id if body else None)
 
 
 @router.post("/feedback", response_model=FeedbackResponse)

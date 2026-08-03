@@ -55,7 +55,7 @@ seedado no Postgres e perfis de cadastro da demo são anexados aqui (ver §6).
 | `sexo` | str | **protegido** — só fairness, não é feature de decisão |
 | `estado` | str | UF |
 | `segmento` | str | `01 ALTA RENDA` / `02 VAREJO` / `03 UNIVERSITARIO` |
-| `renda_estimada_anual_brl` | float | **sensível** — só fairness |
+| `renda_estimada_anual_brl` | float | **sensível monitorado** — feature de contexto e eixo da elegibilidade (`renda_percentil_min`); fairness por faixa de renda |
 | `tempo_relacionamento_meses` | int | contexto |
 | `ind_ativo` | bool | contexto |
 | `possui_*` (24 flags) | bool | produtos atuais; base da recompensa (transição `0→1`) |
@@ -165,7 +165,7 @@ Mapeia para `src/data/policy_store`.
 | `policy_id` (PK) | str |
 | `version` | str |
 | `algorithm` | enum (baseline / thompson / ucb / linucb) |
-| `hyperparams` | json |
+| `hyperparams` | json — inclui `reward_definition`, que **tem precedência** sobre a do catálogo no cálculo da recompensa (versionar política = versionar também a régua de reward) |
 | `status` | enum (shadow / active / retired) |
 | `created_at` | datetime |
 
@@ -296,7 +296,7 @@ produção controlada (Etapa 7).
 |---|---|
 | `run_id` (PK) | str |
 | `policy_id` (FK) | → `politica` (candidata) |
-| `status` | enum (candidate / approved / promoted / rolled_back) |
+| `status` | enum (candidate / approved / **rejected** / promoted / rolled_back) |
 | `metrics` | json |
 | `created_at` | datetime |
 
@@ -405,7 +405,24 @@ erDiagram
 
 ## Nota de conformidade (LGPD)
 
-`sexo` e `renda_estimada_anual_brl` são atributos **protegidos/sensíveis**: não entram
-como feature de decisão — apenas na **análise de fairness de exposição** (Etapa 4).
-`decisao.context` registra explicitamente quais features entraram, justamente para auditar
-essa exclusão. Detalhar em `docs/lgpd-plan.md` (Etapa 8).
+O modelo separa **dois regimes**, e o `decisao.context` registra ambos em toda decisão:
+
+| Regime | Atributo | Tratamento |
+|---|---|---|
+| **Protegido** — nunca entra na decisão | `sexo` | fora do vetor de contexto e da elegibilidade; só entra na análise de fairness. Gravado em `context.atributos_excluidos`. |
+| **Sensível monitorado** — entra de forma legítima | `renda_estimada_anual_brl` | compõe o contexto **e** governa a elegibilidade (`renda_percentil_min`). Gravado em `context.atributos_monitorados`. |
+
+**Por que renda não é excluída.** Uma versão anterior deste documento afirmava que renda não
+entrava como feature de decisão. Era incorreto em dois níveis: ela está em `context_features` do
+`offer_catalog.json` e é o eixo dos filtros `renda_percentil_min`. Mais do que isso, torná-la
+excluída seria *pior* para o cliente — avaliar capacidade financeira antes de ofertar crédito ou
+investimento é exigência de **suitability**, não violação dela. Renda tampouco é atributo
+protegido no sentido de `sexo`: não é categoria de discriminação, é critério de adequação.
+
+O que se exige dela, então, não é exclusão e sim **vigilância**: a checagem de fairness sobre
+renda é de **exposição por faixa** (algum grupo de renda está sendo sistematicamente privado das
+ofertas boas?), enquanto sobre `sexo` é de **ausência** (não pode influenciar em nada).
+
+`decisao.context` registra as features que entraram, os excluídos e os monitorados — é o que
+permite auditar as duas afirmações em cima de decisões reais. Detalhar em `docs/lgpd-plan.md`
+(Etapa 8).

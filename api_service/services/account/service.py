@@ -24,10 +24,13 @@ class AccountService:
 
     async def profile(self, user: User) -> ClienteResponse:
         cod = self.require_cod_cliente(user)
-        cliente = await self.uow.clientes.get_by_cod_cliente(cod)
-        if cliente is None:
+        profile = await self.uow.clientes.get_profile_with_saldo_ficticio(cod)
+        if profile is None:
             raise NotFound("Perfil de cliente não encontrado", code="CLIENT_NOT_FOUND")
-        return ClienteResponse.model_validate(cliente)
+        cliente, saldo_ficticio = profile
+        data = ClienteResponse.model_validate(cliente).model_dump()
+        data["saldo_ficticio"] = saldo_ficticio
+        return ClienteResponse.model_validate(data)
 
     async def decisions(self, user: User) -> list[DecisaoResponse]:
         cod = self.require_cod_cliente(user)
@@ -40,7 +43,9 @@ class AccountService:
         if decision is None:
             raise NotFound("Decisão não encontrada", code="DECISION_NOT_FOUND")
         if user.tipo == TipoUsuario.DEMO and decision.cod_cliente != user.cod_cliente:
-            raise Forbidden("Esta decisão não pertence a você", code="NOT_DECISION_OWNER")
+            raise Forbidden(
+                "Esta decisão não pertence a você", code="NOT_DECISION_OWNER"
+            )
         return decision
 
     @staticmethod

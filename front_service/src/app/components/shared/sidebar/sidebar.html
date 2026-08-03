@@ -1,0 +1,51 @@
+<nav
+  class="fixed left-0 top-0 bottom-0 hidden md:flex flex-col w-[280px] border-r border-gray-200 bg-white z-50"
+>
+  <!-- Logo -->
+
+  <div class="p-6">
+    <div class="flex items-center gap-3 mb-8">
+      <div>
+        <h1 class="text-2xl font-bold text-black">HP Invest - Pro</h1>
+
+        <p class="text-sm text-gray-500">Invista com segurança</p>
+      </div>
+    </div>
+
+    <ul class="space-y-2">
+      <li>
+        <a
+          routerLink="/dashboard"
+          routerLinkActive="border-l-2 border-black font-semibold"
+          class="flex items-center gap-4 py-3 pl-4 text-gray-700 hover:bg-gray-100 transition"
+        >
+          <span class="material-symbols-outlined"> dashboard </span>
+
+          Início
+        </a>
+      </li>
+
+      <li>
+        <a
+          routerLink="/investments"
+          class="flex items-center gap-4 py-3 pl-4 text-gray-500 hover:bg-gray-100"
+        >
+          <span class="material-symbols-outlined"> account_balance_wallet </span>
+
+          Investimentos
+        </a>
+      </li>
+
+      <li>
+        <a
+          routerLink="/profile"
+          class="flex items-center gap-4 py-3 pl-4 text-gray-500 hover:bg-gray-100"
+        >
+          <span class="material-symbols-outlined"> person </span>
+
+          Perfil
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>

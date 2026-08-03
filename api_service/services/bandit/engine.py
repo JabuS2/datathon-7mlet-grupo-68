@@ -20,8 +20,23 @@ from services.bandit.policies import Policy
 from services.bandit.reward import composite_reward
 from services.bandit.state import ArmState, RankedArm
 
-# Atributos protegidos/sensíveis registrados como EXCLUÍDOS da decisão (auditoria LGPD).
+# Atributos PROTEGIDOS: nunca entram na decisão, em nenhuma forma (auditoria LGPD).
 PROTECTED_ATTRIBUTES = ["sexo"]
+
+# Atributos SENSÍVEIS que entram legitimamente na decisão e por isso são monitorados.
+# Renda não é atributo protegido: além de compor o contexto, ela governa a elegibilidade
+# (`renda_percentil_min` nos filtros do catálogo), e avaliar capacidade financeira é exigência
+# de suitability. Registrá-la aqui deixa explícito no log que é uso consciente e fiscalizável —
+# a checagem de fairness sobre ela é de *exposição por faixa de renda*, não de exclusão.
+MONITORED_ATTRIBUTES = ["renda_estimada_anual_brl"]
+
+
+class ArmNotEligible(Exception):
+    """Braço pedido explicitamente não está entre os elegíveis para o cliente."""
+
+    def __init__(self, arm_id: str):
+        self.arm_id = arm_id
+        super().__init__(f"Braço {arm_id} não é elegível para este cliente")
 
 
 @dataclass
@@ -59,24 +74,59 @@ class BanditEngine:
         return ranked, x, self._audit_context(client, renda_pct, sorted(eligible))
 
     def decide(
-        self, client: Mapping[str, Any], policy: Policy, states: Sequence[ArmState]
+        self,
+        client: Mapping[str, Any],
+        policy: Policy,
+        states: Sequence[ArmState],
+        arm_id: str | None = None,
     ) -> Decision | None:
-        """Escolhe o melhor braço elegível. `None` se nenhum braço é elegível."""
+        """Escolhe o braço a servir. `None` se nenhum braço é elegível.
+
+        Sem `arm_id`, vence o topo do ranking — a decisão é da política. Com `arm_id`
+        (vitrine clicável), serve o braço que o usuário escolheu, desde que elegível, e marca
+        `user_selected` nos reason codes: o log precisa distinguir o que a política escolheu do
+        que o usuário escolheu, senão a auditoria credita à política uma decisão que não foi dela.
+
+        Levanta `ArmNotEligible` se o braço pedido não está no conjunto elegível.
+        """
         ranked, _x, context = self.rank(client, policy, states)
         if not ranked:
             return None
-        top = ranked[0]
-        reasons = [*top.reason_codes, f"eligible:{len(context['ofertas_elegiveis'])}"]
+
+        if arm_id is None:
+            top = ranked[0]
+            extra = []
+        else:
+            found = next((r for r in ranked if r.arm_id == arm_id), None)
+            if found is None:
+                raise ArmNotEligible(arm_id)
+            top = found
+            extra = ["user_selected"]
+
+        reasons = [*top.reason_codes, f"eligible:{len(context['ofertas_elegiveis'])}", *extra]
         return Decision(
             arm_id=top.arm_id, score=top.score, reason_codes=reasons, context=context, ranked=ranked
         )
 
     # ── aprendizado ──────────────────────────────────────────────
-    def reward_value(self, arm_id: str, click: float | int | bool) -> float:
-        """Recompensa composta (receita+clique) do braço, para realimentar a política."""
+    def reward_value(
+        self,
+        arm_id: str,
+        click: float | int | bool,
+        reward_definition: Mapping[str, Any] | None = None,
+    ) -> float:
+        """Recompensa composta (receita+clique) do braço, para realimentar a política.
+
+        `reward_definition` da **política ativa** tem precedência sobre a do catálogo: é o que
+        permite versionar formas de recompensa (ex.: uma política que pesa mais o clique que a
+        receita) e garante que o valor gravado corresponda à definição que a política declara.
+        Sem ela, cai no default do `offer_catalog.json`.
+        """
         offer = self.offers.get(arm_id, {})
         return composite_reward(
-            offer.get("expected_revenue_brl", 0.0), click, self.reward_definition
+            offer.get("expected_revenue_brl", 0.0),
+            click,
+            reward_definition or self.reward_definition,
         )
 
     def update(
@@ -109,6 +159,7 @@ class BanditEngine:
             "renda_percentil": round(renda_pct, 2),
             "ofertas_elegiveis": eligible,
             "atributos_excluidos": PROTECTED_ATTRIBUTES,
+            "atributos_monitorados": MONITORED_ATTRIBUTES,
         }
 
 

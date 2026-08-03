@@ -49,6 +49,11 @@ e `policyVersion`).
 ```
 `channel` ∈ `app | push | email | sms` (default `app`).
 
+`armId` é **opcional**: omitido, a política escolhe o topo do ranking; informado (vitrine
+clicável), registra a oferta que o usuário escolheu e acrescenta `user_selected` aos
+`reasonCodes` — o log distingue decisão da política de escolha do usuário. Braço fora do
+conjunto elegível devolve `409 ARM_NOT_ELIGIBLE`.
+
 **Response 200** (`DecideResponse`)
 ```json
 {
@@ -95,9 +100,20 @@ Realimenta o bandit; pode chegar **atrasado** (`status="pending"` até observar 
 **Request** (`RewardRequest`): `{ "decisionId": "b1f2…", "converted": true }`
 **Response 200** (`RewardResponse`): `{ "rewardId": "…", "decisionId": "b1f2…", "value": 0.71, "status": "observed" }`
 
+O `value` é calculado pelo `reward_definition` da **política que gerou a decisão** (de
+`politica.hyperparams`), com fallback para o do `offer_catalog.json`. Não é o da política ativa
+no momento do reward: recompensa atrasada pode chegar depois de uma promoção, e o valor precisa
+refletir a regra vigente quando a decisão foi tomada. Enviar `value` no request sobrescreve o
+cálculo — use só para replay/backfill.
+
 ### `GET /decisions/{decisionId}` — visão auditável
-**Response 200** (`DecisaoResponse`): decisão completa com `context` (features que entraram — LGPD),
-`reasonCodes`, `chosenArmId`, `policyVersion`, `score`, `createdAt`.
+**Response 200** (`DecisaoResponse`): decisão completa com `context`, `reasonCodes`,
+`chosenArmId`, `policyVersion`, `score`, `createdAt`.
+
+O `context` traz os dois regimes de conformidade (ver `domain-model.md`):
+`atributos_excluidos: ["sexo"]` (protegido, nunca entra) e
+`atributos_monitorados: ["renda_estimada_anual_brl"]` (sensível, entra de forma legítima e é
+acompanhado por fairness de exposição).
 
 ---
 
@@ -105,7 +121,8 @@ Realimenta o bandit; pode chegar **atrasado** (`status="pending"` até observar 
 
 | Método | Rota | Response | Papel |
 |---|---|---|---|
-| `GET` | `/offers` | `OfertaResponse[]` | catálogo dos 10 braços |
+| `GET` | `/offers` | `OfertaPublica[]` | vitrine: 10 braços, sem parâmetros do bandit |
+| `GET` | `/offers/catalog` | `OfertaResponse[]` | catálogo interno (receita, elegibilidade) — **operador** |
 | `GET` | `/segments` | `SegmentoResponse[]` | segmentos sintéticos |
 | `POST` | `/onboarding` | `OnboardingResponse` | cadastro demo (perfil template §6) |
 | `GET` | `/clients/{codCliente}` | `ClienteResponse` | contexto do cliente |
@@ -130,11 +147,11 @@ feedback/reward verificam a **posse** da decisão. É a jornada "loga → vê co
 | `GET` | `/me` | `UserResponse` | conta: `email`, `tipo`, `codCliente`, `saldoFicticio` |
 | `GET` | `/me/profile` | `ClienteResponse` | contexto do próprio cliente (`409 NO_CLIENT_PROFILE` se operador) |
 | `GET` | `/me/recommendations` | `ShowcaseResponse` | vitrine ranqueada do usuário (`?channel=&top_k=`) |
-| `POST` | `/me/decide` | `DecideResponse` | decide p/ o próprio cliente (`?channel=`) e registra o log |
+| `POST` | `/me/decide` | `DecideResponse` | decide p/ o próprio cliente (`?channel=`) e registra o log; corpo opcional `{ "armId": "..." }` para a vitrine clicável |
 | `POST` | `/me/feedback` | `FeedbackResponse` | clique — só na **própria** decisão (`403 NOT_DECISION_OWNER`) |
 | `POST` | `/me/reward` | `RewardResponse` | resultado — só na própria decisão |
 | `GET` | `/me/decisions` | `DecisaoResponse[]` | histórico das próprias decisões |
-| `GET` | `/offers` | `OfertaResponse[]` | catálogo das 10 ofertas |
+| `GET` | `/offers` | `OfertaPublica[]` | vitrine das 10 ofertas (`armId`, nome, descrição, categoria) |
 | `GET` | `/segments` | `SegmentoResponse[]` | segmentos sintéticos |
 
 > As rotas cruas `/decide`,`/showcase`,`/feedback`,`/reward` (sem `/me`) permanecem como

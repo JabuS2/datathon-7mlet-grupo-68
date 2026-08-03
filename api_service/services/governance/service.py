@@ -103,7 +103,7 @@ class GovernanceService:
                 await self._activate(candidate)
                 cycle.status = StatusCicloRetreino.PROMOTED
             else:
-                cycle.status = StatusCicloRetreino.APPROVED  # avaliado, mas não promovido
+                cycle.status = StatusCicloRetreino.REJECTED  # reprovada no gate humano
 
             await self.uow.session.flush()
             return AprovacaoHumanaResponse.model_validate(gate)
