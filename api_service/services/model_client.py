@@ -35,7 +35,8 @@ class ModelServiceClient:
             raise InternalServerError(
                 f"Model service retornou {resp.status_code}", code="MODEL_SERVICE_ERROR"
             )
-        return resp.json()
+        data: dict[str, Any] = resp.json()
+        return data
 
     async def rank(
         self,

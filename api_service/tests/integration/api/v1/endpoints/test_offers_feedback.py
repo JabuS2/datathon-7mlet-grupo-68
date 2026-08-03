@@ -77,7 +77,9 @@ async def test_list_offers_requires_auth(client, mock_model):
 @pytest.mark.asyncio
 async def test_feedback_click_sets_reward_and_updates_model(client, mock_model):
     headers = await _auth_headers(client)
-    resp = await client.post("/feedback", headers=headers, json={"armId": "OFF-SEG-003", "clicked": True})
+    resp = await client.post(
+        "/feedback", headers=headers, json={"armId": "OFF-SEG-003", "clicked": True}
+    )
     assert resp.status_code == status.HTTP_200_OK
     body = resp.json()
     assert body["reward"] == 1.0
@@ -88,7 +90,9 @@ async def test_feedback_click_sets_reward_and_updates_model(client, mock_model):
 @pytest.mark.asyncio
 async def test_feedback_no_click_reward_zero(client, mock_model):
     headers = await _auth_headers(client)
-    resp = await client.post("/feedback", headers=headers, json={"armId": "OFF-CR-001", "clicked": False})
+    resp = await client.post(
+        "/feedback", headers=headers, json={"armId": "OFF-CR-001", "clicked": False}
+    )
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json()["reward"] == 0.0
 
