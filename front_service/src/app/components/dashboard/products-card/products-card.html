@@ -1,0 +1,29 @@
+@if (profile(); as profile) {
+  <div class="h-full bg-white border border-gray-200 rounded-lg p-6">
+    <h3 class="text-xl font-semibold border-b border-gray-200 pb-3 mb-5">Produtos</h3>
+
+    <div
+      class="space-y-4 max-h-[250px] overflow-y-auto pr-2 scroll-smooth [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-gray-400 [scrollbar-color:#d1d5db_transparent] [scrollbar-width:thin]"
+    >
+      @for (product of products(); track product.name) {
+        <div class="flex justify-between items-center rounded-md border border-gray-200 p-4">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined">
+              {{ product.icon }}
+            </span>
+
+            <span>
+              {{ product.name }}
+            </span>
+          </div>
+
+          @if (product.active) {
+            <span class="bg-black text-white text-xs px-3 py-1 rounded"> Ativo </span>
+          } @else {
+            <span class="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded"> Inativo </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

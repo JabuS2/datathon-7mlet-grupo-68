@@ -1,0 +1,444 @@
+# Guia de integração do front — jornada do cliente
+
+Como consumir a API da plataforma MAB na jornada do visitante: cadastro → recomendação →
+interação → aprendizado. Contrato completo em [`api-contracts.md`](api-contracts.md).
+
+**Base URL:** `http://localhost:8001/api/v1`
+**Formato:** JSON em **camelCase** (envio e resposta).
+**Autenticação:** `Authorization: Bearer <accessToken>` em tudo depois do passo 1.
+**Validade do token:** 30 minutos. Ao receber `401`, refaça o login.
+**CORS liberado para:** `http://localhost:4200` e `http://localhost:3000`.
+
+---
+
+## Antes de tudo: qual cadastro usar
+
+Existem **dois** e escolher errado quebra a jornada inteira.
+
+| Rota | Cria | Quando usar |
+|---|---|---|
+| `POST /onboarding` | conta **+ perfil de cliente** (`tipo: demo`) | **Cliente do app.** É esta. |
+| `POST /register` | só a conta, sem perfil (`tipo: operador`) | Backoffice/operador. Não use no app. |
+
+Quem entra por `/register` fica sem `codCliente` e **todas** as rotas `/me/*` respondem
+`409 NO_CLIENT_PROFILE`. O bandit não tem contexto para decidir nada.
+
+---
+
+## Passo 1 — Criar a conta
+
+O onboarding faz duas coisas de uma vez: gera um perfil sintético de cliente a partir das
+respostas (copiando um cliente real parecido como template) e cria a conta de acesso.
+
+```http
+POST /api/v1/onboarding
+Content-Type: application/json
+```
+```json
+{
+  "email": "visitante@exemplo.com",
+  "password": "senha1234",
+  "idade": 34,
+  "segmento": "02 - VAREJO",
+  "rendaEstimadaAnualBrl": 85000
+}
+```
+
+| Campo | Obrigatório | Regra |
+|---|---|---|
+| `email` | sim | 3–254 chars |
+| `password` | sim | 6–128 chars |
+| `idade` | sim | 18 a 100 |
+| `segmento` | sim | `01 - ALTA RENDA`, `02 - VAREJO` ou `03 - UNIVERSITARIO` |
+| `rendaEstimadaAnualBrl` | não | ≥ 0; se omitido, herda do template |
+
+São as "2–3 perguntas" do onboarding — pode ser um wizard curto.
+
+**Resposta 200** — já vem autenticado, não precisa chamar `/login` em seguida:
+
+```json
+{
+  "accessToken": "eyJhbGciOi...",
+  "tokenType": "bearer",
+  "cliente": {
+    "codCliente": 9000000,
+    "idade": 34,
+    "tempoRelacionamentoMeses": 7,
+    "indAtivo": true,
+    "segmento": "02 - VAREJO",
+    "estado": "SP",
+    "segmentosSinteticos": ["SEG-ALTA-RENDA", "SEG-POUPADOR", "..."],
+    "origem": "demo"
+  }
+}
+```
+
+Guarde o `accessToken`. O `codCliente` **não** precisa ser enviado depois — a API o extrai do token.
+
+**Erros:** `409 EMAIL_EXISTS` · `422` (idade fora de 18–100, senha curta) · `409 NO_SEED_DATA`
+(banco sem clientes de seed — é problema de ambiente, avise o backend).
+
+### Login em acessos posteriores
+
+```http
+POST /api/v1/login
+```
+```json
+{ "email": "visitante@exemplo.com", "password": "senha1234" }
+```
+→ `{ "accessToken": "...", "tokenType": "bearer" }` · **401 INVALID_CREDENTIALS** se errado.
+
+---
+
+## Passo 2 — Montar a home
+
+Duas chamadas, propósitos diferentes.
+
+### Dados da conta
+
+```http
+GET /api/v1/me
+```
+```json
+{ "email": "visitante@exemplo.com", "tipo": "demo", "isAdmin": false, "codCliente": 9000000 }
+```
+
+Use `tipo` para decidir o que renderizar: `demo` é cliente, `operador` é backoffice.
+
+### Perfil do cliente (opcional, para uma tela "meu perfil")
+
+```http
+GET /api/v1/me/profile
+```
+```json
+{
+  "codCliente": 9000000, "idade": 34, "tempoRelacionamentoMeses": 7,
+  "indAtivo": true, "segmento": "02 - VAREJO", "estado": "SP",
+  "segmentosSinteticos": ["SEG-POUPADOR"], "origem": "demo"
+}
+```
+
+---
+
+## Passo 3 — Mostrar a oferta recomendada
+
+**Este é o passo que importa.** Leia a seção inteira antes de codar: há uma pegadinha.
+
+### `POST /me/decide` — a oferta principal
+
+```http
+POST /api/v1/me/decide?channel=app
+Authorization: Bearer <token>
+```
+
+**Sem body.** O `channel` vai na query string: `app` (padrão), `push`, `email` ou `sms`.
+
+```json
+{
+  "decisionId": "4d0da5bf-7390-4c22-9ad3-7239f7933cec",
+  "armId": "OFF-INV-004",
+  "productName": "Fundo Multimercado",
+  "description": "Gestão ativa em juros, câmbio e bolsa para diversificar a carteira.",
+  "category": "investimento",
+  "channel": "app",
+  "score": 1.4995,
+  "reasonCodes": ["policy:linucb", "cold_start", "eligible:7"],
+  "policyVersion": "linucb-v1"
+}
+```
+
+**Guarde o `decisionId`** — sem ele não dá para registrar clique nem interesse.
+
+Renderize `productName`, `description` e `category`. O `score` e os `reasonCodes` são internos
+(úteis num modo debug da demo, não na tela do cliente).
+
+**Erros:** `404 CLIENT_NOT_FOUND` · `409 NO_ACTIVE_POLICY` (ambiente) · `409 NO_ELIGIBLE_ARM`
+(nenhuma oferta serve para esse perfil — mostre um estado vazio, não um erro).
+
+### `GET /me/recommendations` — a lista
+
+```http
+GET /api/v1/me/recommendations?top_k=5&channel=app
+```
+```json
+{
+  "codCliente": 9000000,
+  "policyVersion": "linucb-v1",
+  "items": [
+    { "rank": 1, "armId": "OFF-INV-004", "productName": "Fundo Multimercado",
+      "description": "...", "category": "investimento",
+      "score": 1.4995, "reasonCodes": ["policy:linucb", "cold_start"] }
+  ]
+}
+```
+
+`top_k` vai de 1 a 10 (padrão 5). Repare que os parâmetros de query são **snake_case** (`top_k`),
+diferente do corpo JSON.
+
+### Vitrine clicável: como atribuir o clique à oferta certa
+
+`GET /me/recommendations` **não devolve `decisionId`** — ela não grava nada, é só leitura. Quem
+cria o `decisionId` é sempre o `POST /me/decide`.
+
+Para a lista clicável, chame `/me/decide` **no momento do clique**, informando qual oferta o
+usuário escolheu:
+
+```http
+POST /api/v1/me/decide?channel=app
+```
+```json
+{ "armId": "OFF-SEG-003" }
+```
+
+A resposta é a mesma do fluxo sem corpo, com `armId` igual ao que você mandou e um reason code
+a mais:
+
+```json
+{
+  "decisionId": "9f21c4de-...",
+  "armId": "OFF-SEG-003",
+  "productName": "Seguro Viagem",
+  "reasonCodes": ["policy:linucb", "cold_start", "eligible:7", "user_selected"],
+  "policyVersion": "linucb-v1"
+}
+```
+
+O `user_selected` existe porque o log precisa distinguir o que a **política** escolheu do que o
+**usuário** escolheu — sem isso a auditoria creditaria à política uma decisão que não foi dela.
+
+**Erro específico:** `409 ARM_NOT_ELIGIBLE` se o `armId` não estiver no conjunto elegível daquele
+cliente. Como você monta a lista a partir de `/me/recommendations`, isso não deve acontecer no
+caminho feliz — se acontecer, é estado velho em tela: recarregue as recomendações.
+
+### Os dois desenhos possíveis
+
+**A. Oferta única** — a home chama `/me/decide` **sem corpo**, a política escolhe, você mostra
+uma oferta em destaque com "Tenho interesse" / "Agora não". Mais fiel ao bandit.
+
+**B. Vitrine clicável** — você lista com `/me/recommendations`, o usuário escolhe, e você chama
+`/me/decide` **com `armId`**. Mais natural como app.
+
+Dá para combinar: destaque via `/me/decide` sem corpo + lista abaixo com `armId` no clique.
+
+> **Nota de modelagem (vale saber):** no desenho B a decisão só é registrada no clique, então as
+> ofertas que apareceram na lista mas não foram clicadas **não** geram impressão nem recompensa.
+> O modelo aprende só sobre a clicada. Está correto e é suficiente para a demo; se um dia
+> quiserem medir taxa de clique por posição da lista, aí sim é preciso registrar impressão para
+> todos os itens exibidos.
+
+---
+
+## Passo 4 — Registrar o clique
+
+Quando o usuário **abre/expande** a oferta ou toca no card:
+
+```http
+POST /api/v1/me/feedback
+```
+```json
+{ "decisionId": "4d0da5bf-7390-4c22-9ad3-7239f7933cec", "type": "click" }
+```
+
+`type` aceita `click` ou `impression` (padrão `click`). Impressão já é registrada
+automaticamente pelo `/me/decide` — só envie `impression` se precisar marcar reexibições.
+
+```json
+{ "eventId": "d326d0fa-...", "decisionId": "4d0da5bf-...", "type": "click",
+  "occurredAt": "2026-08-02T20:24:37.041430Z" }
+```
+
+Isso **ainda não** ensina o modelo — é só o sinal de engajamento.
+
+---
+
+## Passo 5 — Registrar o resultado (aqui o modelo aprende)
+
+Nos botões de decisão:
+
+```http
+POST /api/v1/me/reward
+```
+
+**"Tenho interesse":**
+```json
+{ "decisionId": "4d0da5bf-...", "converted": true }
+```
+
+**"Agora não":**
+```json
+{ "decisionId": "4d0da5bf-...", "converted": false }
+```
+
+Não envie o campo `value` — o backend calcula a recompensa. Enviar `value` sobrescreve o
+cálculo e distorce o aprendizado.
+
+```json
+{ "rewardId": "c4ed2d4e-...", "decisionId": "4d0da5bf-...",
+  "value": 0.5586, "status": "observed" }
+```
+
+Depois disso, uma nova chamada a `/me/decide` ou `/me/recommendations` já reflete o aprendizado —
+os scores mudam. É o efeito para mostrar ao vivo na demo.
+
+**Erros de 4 e 5:** `404 DECISION_NOT_FOUND` (id inválido) · `403 NOT_DECISION_OWNER`
+(a decisão é de outro usuário — cada um só interage com as próprias).
+
+---
+
+## Passo 6 — Telas de apoio
+
+### Vitrine ranqueada
+
+```http
+GET /api/v1/offers?algorithm=linucb&top=5
+```
+```json
+[ { "armId": "OFF-CR-001", "rank": 1, "score": 0.8421, "category": "credito",
+    "productName": "Crédito Pessoal Pré-Aprovado",
+    "description": "Dinheiro na conta em minutos...",
+    "valorTotal": 12000.0, "descontoPct": 5.0, "valorFinal": 11400.0 } ]
+```
+
+Ranqueada pelo `model_service` a partir do perfil do usuário (`GET/PUT /api/v1/profile`) e já
+filtrada por elegibilidade. Receita esperada, `contextFeatures` e as regras de `eligibleSegment`
+continuam internas, em `/offers/catalog`, restrita a operador (403 para o cliente).
+
+`GET /api/v1/segments` devolve os segmentos sintéticos, se precisar de rótulos.
+
+### Histórico
+
+```http
+GET /api/v1/me/decisions
+```
+
+Lista as decisões do usuário com `chosenArmId`, `score`, `reasonCodes`, `createdAt` e o `context`
+auditado. Serve para um "minhas recomendações anteriores" ou para a tela de transparência
+(*"por que vi esta oferta"*) usando os `reasonCodes`.
+
+---
+
+## Resumo do ciclo
+
+**Oferta única:**
+
+```
+POST /onboarding              → accessToken (não use /register!)
+   ↓
+GET  /me                      → dados da conta
+POST /me/decide?channel=app   → oferta em destaque + decisionId   [grava impressão]
+   ↓  usuário toca no card
+POST /me/feedback             → { decisionId, type: "click" }
+   ↓  usuário decide
+POST /me/reward               → { decisionId, converted: true|false }   [modelo aprende]
+   ↓
+POST /me/decide               → próxima oferta, já com o aprendizado
+```
+
+**Vitrine clicável:**
+
+```
+POST /onboarding                    → accessToken
+   ↓
+GET  /me/recommendations?top_k=5    → lista para renderizar (sem decisionId)
+   ↓  usuário clica no card da 3ª oferta
+POST /me/decide  { armId: "OFF-..." } → decisionId   [reason code: user_selected]
+   ↓
+POST /me/feedback  { decisionId, type: "click" }
+   ↓  usuário decide
+POST /me/reward    { decisionId, converted: true|false }   [modelo aprende]
+   ↓
+GET  /me/recommendations            → lista reordenada pelo aprendizado
+```
+
+## Tabela de erros
+
+| Código | `code` | O que fazer no front |
+|---|---|---|
+| 401 | `MISSING_TOKEN` / `TOKEN_EXPIRED` | redirecionar para login |
+| 401 | `INVALID_CREDENTIALS` | "e-mail ou senha inválidos" |
+| 403 | `NOT_DECISION_OWNER` | bug de estado — o `decisionId` não é do usuário logado |
+| 403 | `ROLE_NOT_ALLOWED` | rota de operador; esconda do cliente |
+| 404 | `DECISION_NOT_FOUND` | `decisionId` inválido ou expirado do estado local |
+| 409 | `ARM_NOT_ELIGIBLE` | `armId` fora do conjunto elegível — recarregue `/me/recommendations` |
+| 409 | `NO_CLIENT_PROFILE` | conta criada por `/register` — precisa vir do `/onboarding` |
+| 409 | `NO_ELIGIBLE_ARM` | estado vazio: "nenhuma oferta disponível agora" |
+| 409 | `EMAIL_EXISTS` | "e-mail já cadastrado" |
+| 422 | — | validação: idade 18–100, senha ≥ 6, `topK` 1–10 |
+
+Todo erro vem no mesmo formato:
+
+```json
+{ "error": "mensagem legível em português", "code": "CODIGO_ESTAVEL" }
+```
+
+Use o `code` na lógica (é estável) e o `error` na tela.
+
+---
+
+## Como subir a API para desenvolver contra ela
+
+```bash
+docker compose up -d postgres
+cd api_service && alembic upgrade head
+python ../scripts/seed_db.py --client-limit 200      # catálogo, políticas, clientes
+uvicorn main:app --reload --port 8001
+```
+
+Swagger em `http://localhost:8001/docs`. Sem o seed, `/onboarding` responde
+`409 NO_SEED_DATA` e `/me/decide` responde `409 NO_ACTIVE_POLICY` — os dois são falta de dado,
+não bug.
+
+---
+
+## Estado do `front_service` e o que falta construir
+
+Levantamento feito em 02/08/2026. **Do lado da API a jornada está completa e validada ponta a
+ponta**; o que falta é tela.
+
+### Já existe e funciona
+
+| Peça | Onde | Observação |
+|---|---|---|
+| Guarda de token | `services/auth.ts` | `accessToken`/`tokenType` em `localStorage`, exposto como signal |
+| Injeção do header | `core/http-interceptor.ts` | põe `Authorization` em toda request — **não monte header à mão** |
+| Proteção de rota | `guard/auth-guard.ts` | `canActivate` bloqueia sem token |
+| Login | `components/login/` | chama `/login`, salva o token e navega |
+
+A base de autenticação está pronta. Quem escrever as telas novas só consome os endpoints.
+
+### Falta
+
+**1. Nenhuma tela da jornada existe.** Os componentes são `login`, `register` e `admin` — e o
+`admin` é casca (`admin.html` = `<p>admin works!</p>`). Não há tela de oferta, vitrine ou
+histórico.
+
+**2. O cadastro aponta para o endpoint errado.** `services/register.ts` posta em `/register`,
+que cria conta **sem perfil de cliente**: todo `/me/*` depois responde `409 NO_CLIENT_PROFILE`.
+Tem de ir para `/onboarding`, que pede dois campos a mais (`idade`, `segmento`) e já devolve o
+`accessToken` — dispensa o `/login` seguinte e o redirect para a tela de login.
+
+**3. O login manda todo mundo para `/admin`.** `components/login/login.ts` navega fixo. Deveria
+ramificar pelo `tipo` que vem do `GET /me`: `demo` → home de ofertas, `operador` → backoffice.
+
+**4. Não há tratamento de expiração.** O token dura **30 minutos** e a API **não tem refresh
+token**. O `utils/error-handler.ts` só exibe a mensagem; um `401` no meio da sessão vira um toast
+confuso. Trate `401` no interceptor: limpar token e redirecionar para `/login`.
+
+### Caminho mínimo
+
+```
+services/mab.ts           → onboarding, recommendations, decide, feedback, reward
+components/onboarding/    → email, senha, idade, segmento   → POST /onboarding
+components/home/          → ofertas + clique + "tenho interesse" / "agora não"
+```
+
+Mais três ajustes pequenos: `register` apontando para `/onboarding`, redirect do login por
+`tipo`, e o `401` do interceptor.
+
+### Decisão de layout a tomar antes
+
+Os dois desenhos da seção *"Os dois desenhos possíveis"* estão implementados na API. Escolha
+qual construir **antes** de começar a tela — muda a estrutura inteira:
+
+- **oferta única** — `POST /me/decide` sem corpo, uma oferta em destaque, dois botões;
+- **vitrine clicável** — `GET /me/recommendations` lista, `POST /me/decide {armId}` no clique.

@@ -11,12 +11,21 @@ RUN pip install --no-cache-dir poetry
 
 COPY api_service/pyproject.toml api_service/poetry.lock* ./
 
-RUN poetry install --no-interaction --no-ansi
+# Somente dependências de produção (sem grupos de teste/lint) → imagem menor.
+RUN poetry install --only main --no-interaction --no-ansi
 
 COPY api_service/ .
 
+COPY infra/docker/entrypoint.api.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Executa como usuário não-root (o entrypoint roda migração + seed, que não exigem root).
+RUN useradd --create-home --uid 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8000
 
-# ddtrace-run instrumenta a app para o Datadog. Sem DD_TRACE_ENABLED=true (default
-# do compose é false) ele não tenta conectar ao agent — não afeta itens 1-6.
-CMD ["ddtrace-run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# O entrypoint espera o Postgres, migra, semeia (SEED_DB) e sobe o uvicorn sob
+# ddtrace-run (instrumentação Datadog) sem --reload. Sem DD_TRACE_ENABLED=true
+# (default do compose é false) o ddtrace não tenta conectar ao agent.
+ENTRYPOINT ["/app/entrypoint.sh"]

@@ -1,0 +1,25 @@
+<div
+  class="flex flex-col md:flex-row justify-between md:items-end gap-4 border-b border-gray-200 pb-5 mt-4"
+>
+  @if (profile(); as profile) {
+    <div></div>
+
+    <span
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-300 text-sm font-medium bg-white w-fit"
+    >
+      @if (profile.indAtivo) {
+        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+      } @else {
+        <span class="w-2 h-2 rounded-full bg-red-500"></span>
+      }
+
+      <span class="text-gray-500">
+        @if (profile.indAtivo) {
+          Cliente Ativo
+        } @else {
+          Cliente Inativo
+        }
+      </span>
+    </span>
+  }
+</div>

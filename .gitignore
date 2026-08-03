@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 .venv/
+**/.venv/
+.venv*/
+**/.venv*/
 venv/
 .mypy_cache/
 .pytest_cache/
@@ -25,9 +28,14 @@ mlruns/
 
 # Node
 node_modules/
+**/node_modules/
 apps/hp-invest/dist/
 apps/dashboard/dist/
+front_service/dist/
 *.tsbuildinfo
+
+# Generated service dashboard (make start-project)
+scripts/project-urls.html
 
 # OS
 .DS_Store
@@ -50,3 +58,6 @@ data/processed/*.csv
 data/processed/*.parquet
 data/synthetic_enrichment/*.csv
 data/synthetic_enrichment/*.parquet
+
+# MkDocs build output
+site/

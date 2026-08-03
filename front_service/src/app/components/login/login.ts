@@ -28,8 +28,8 @@ export class LoginComponent {
 
   loginModel = signal<ILoginRequest>({
     email: '',
-    password: ''
-  })
+    password: '',
+  });
 
   loginForm = form(this.loginModel, (schemaPath) => {
     required(schemaPath.email, { message: 'Email é requerido' });
@@ -45,12 +45,13 @@ export class LoginComponent {
     event.preventDefault();
     const credentials = this.loginModel();
 
-    this.loginService.login(credentials)
+    this.loginService
+      .login(credentials)
       .pipe(this.baseTrack.track())
       .subscribe({
         next: (response: ILoginResponse) => {
           this.authService.setToken(response.accessToken, response.tokenType);
-          this.router.navigate(['/admin']);
+          this.router.navigate(['/dashboard']);
         },
         error: (error) => {
           this._snackBar.open(this.errorHandler.getErrorMessage(error), 'Fechar', {
@@ -58,7 +59,7 @@ export class LoginComponent {
             horizontalPosition: 'end',
             verticalPosition: 'top',
           });
-        }
+        },
       });
   }
 }

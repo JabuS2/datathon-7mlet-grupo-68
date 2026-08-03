@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { Login } from './login';
 import { ILoginRequest, ILoginResponse } from '../interfaces/ilogin';
@@ -38,7 +38,7 @@ describe('Login', () => {
       expect(response).toEqual(mockResponse);
     });
 
-    const req = httpMock.expectOne('http://localhost:8008/api/v1/login');
+    const req = httpMock.expectOne('http://localhost:8001/api/v1/login');
 
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(mockCredentials);
@@ -54,7 +54,7 @@ describe('Login', () => {
 
     service.login(mockCredentials).subscribe();
 
-    const req = httpMock.expectOne('http://localhost:8008/api/v1/login');
+    const req = httpMock.expectOne('http://localhost:8001/api/v1/login');
 
     expect(req.request.url).toContain('/login');
     req.flush({});
@@ -62,5 +62,6 @@ describe('Login', () => {
 
   afterEach(() => {
     httpMock.verify();
+    TestBed.resetTestingModule();
   });
 });

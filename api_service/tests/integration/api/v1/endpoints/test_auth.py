@@ -89,7 +89,7 @@ async def test_me_endpoint(client):
 @pytest.mark.asyncio
 async def test_me_endpoint_unauthorized(client):
     me_resp = await client.get("/me")
-    assert me_resp.status_code == status.HTTP_403_FORBIDDEN
+    assert me_resp.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.asyncio

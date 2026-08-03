@@ -1,0 +1,76 @@
+<section class="bg-black text-white rounded-xl p-6 mt-6">
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-xl font-semibold">Oportunidades para você</h2>
+
+    <span class="text-xs uppercase tracking-wider text-gray-400"> Arraste para ver mais </span>
+  </div>
+
+  <div
+    class="flex gap-6 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-white/30 [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin]"
+  >
+    @for (opportunity of opportunities(); track opportunity.armId) {
+      <article
+        class="min-w-[288px] w-72 flex-shrink-0 snap-start rounded-xl border border-white/10 bg-white/10 p-5 flex flex-col justify-between"
+      >
+        <div>
+          <div class="flex items-center gap-2 mb-3">
+            <span class="rounded bg-white/20 px-2 py-1 text-[10px] uppercase font-semibold">
+              {{ opportunity.category }}
+            </span>
+
+            <span class="text-[10px] text-gray-400 font-mono">
+              {{ opportunity.armId }}
+            </span>
+
+            <span
+              class="ml-auto rounded bg-emerald-400/20 px-2 py-1 text-[10px] font-semibold text-emerald-300"
+              [title]="'Score do modelo: ' + (opportunity.score | number: '1.4-4')"
+            >
+              #{{ opportunity.rank }} · {{ opportunity.score | number: '1.2-2' }}
+            </span>
+          </div>
+
+          <h3 class="text-lg font-semibold mb-2">
+            {{ opportunity.productName }}
+          </h3>
+
+          <p class="text-sm text-gray-300 leading-6 mb-4">
+            {{ opportunity.description }}
+          </p>
+
+          @if (opportunity.valorFinal !== undefined) {
+            <div class="rounded-lg bg-white/5 p-3">
+              <div class="flex items-baseline gap-2">
+                @if (opportunity.valorTotal !== undefined) {
+                  <span class="text-xs text-gray-400 line-through">
+                    R$ {{ opportunity.valorTotal | number: '1.2-2' }}
+                  </span>
+                }
+
+                <strong class="text-lg text-white">
+                  R$ {{ opportunity.valorFinal | number: '1.2-2' }}
+                </strong>
+              </div>
+
+              @if (opportunity.descontoPct) {
+                <span
+                  class="mt-1 inline-block rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300"
+                >
+                  {{ opportunity.descontoPct | number: '1.0-2' }}% de desconto
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        <button
+          type="button"
+          (click)="knowMore(opportunity)"
+          class="mt-6 w-full cursor-pointer rounded-md bg-white py-2.5 text-sm font-semibold uppercase tracking-wide text-black transition hover:bg-gray-100"
+        >
+          Conhecer
+        </button>
+      </article>
+    }
+  </div>
+</section>

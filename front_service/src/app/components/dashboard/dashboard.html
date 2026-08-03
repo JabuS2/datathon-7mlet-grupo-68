@@ -1,0 +1,19 @@
+<app-sidebar />
+
+<div class="ml-[280px] min-h-screen bg-[#f9f9f9]">
+  <app-topbar />
+
+  <main class="max-w-[1440px] mx-auto px-6 lg:px-10 pt-20 pb-10">
+    <app-investments />
+    @if (profile(); as profile) {
+      <app-hero-metrics [profile]="profile" />
+
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 my-6">
+        <app-transactions class="xl:col-span-8" />
+        <app-products-card class="xl:col-span-4" [profile]="profile" />
+      </div>
+
+      <app-segments-card />
+    }
+  </main>
+</div>
