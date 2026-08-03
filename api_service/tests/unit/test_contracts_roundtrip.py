@@ -32,6 +32,33 @@ from schemas.segmento import SegmentoResponse
 _NOW = datetime.now(UTC)
 _DID = uuid4()
 
+CLIENTE_FLAGS = {
+    "possui_poupanca": False,
+    "possui_conta_corrente": False,
+    "possui_conta_corrente_plus": False,
+    "possui_conta_premium": False,
+    "possui_conta_salario": False,
+    "possui_conta_junior": False,
+    "possui_conta_universitaria": False,
+    "possui_conta_digital": False,
+    "possui_conta_investimento": False,
+    "possui_cdb_curto_prazo": False,
+    "possui_cdb_medio_prazo": False,
+    "possui_cdb_longo_prazo": False,
+    "possui_fundo_investimento": False,
+    "possui_titulos_investimento": False,
+    "possui_previdencia_privada": False,
+    "possui_financiamento_imovel": False,
+    "possui_financiamento_veiculo": False,
+    "possui_emprestimo_pessoal": False,
+    "possui_cartao_credito": False,
+    "possui_aval_garantia": False,
+    "possui_pagamento_tributos": False,
+    "possui_folha_pagamento": False,
+    "possui_beneficio_previdencia": False,
+    "possui_debito_automatico": False,
+}
+
 CONTRACTS = [
     (DecideRequest, {"cod_cliente": 100870, "channel": "app"}),
     (
@@ -68,7 +95,12 @@ CONTRACTS = [
     ),
     (
         FeedbackResponse,
-        {"event_id": uuid4(), "decision_id": _DID, "type": "click", "occurred_at": _NOW},
+        {
+            "event_id": uuid4(),
+            "decision_id": _DID,
+            "type": "click",
+            "occurred_at": _NOW,
+        },
     ),
     (
         RewardResponse,
@@ -109,6 +141,7 @@ CONTRACTS = [
             "estado": "SP",
             "segmentos_sinteticos": ["SEG-JOVEM"],
             "origem": "demo",
+            **CLIENTE_FLAGS,
         },
     ),
     (
@@ -180,7 +213,12 @@ CONTRACTS = [
     ),
     (
         CicloRetreinoResponse,
-        {"run_id": "run-1", "policy_id": "linucb-v2", "status": "candidate", "metrics": {}},
+        {
+            "run_id": "run-1",
+            "policy_id": "linucb-v2",
+            "status": "candidate",
+            "metrics": {},
+        },
     ),
     (
         AprovacaoHumanaResponse,
@@ -208,7 +246,9 @@ CONTRACTS = [
 ]
 
 
-@pytest.mark.parametrize("model, payload", CONTRACTS, ids=[m.__name__ for m, _ in CONTRACTS])
+@pytest.mark.parametrize(
+    "model, payload", CONTRACTS, ids=[m.__name__ for m, _ in CONTRACTS]
+)
 def test_contract_roundtrip(model, payload):
     obj = model.model_validate(payload)  # entrada snake_case (populate_by_name)
     dumped = obj.model_dump(by_alias=True)  # saída camelCase (forma do contrato)
