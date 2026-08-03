@@ -20,8 +20,15 @@ from services.bandit.policies import Policy
 from services.bandit.reward import composite_reward
 from services.bandit.state import ArmState, RankedArm
 
-# Atributos protegidos/sensíveis registrados como EXCLUÍDOS da decisão (auditoria LGPD).
+# Atributos PROTEGIDOS: nunca entram na decisão, em nenhuma forma (auditoria LGPD).
 PROTECTED_ATTRIBUTES = ["sexo"]
+
+# Atributos SENSÍVEIS que entram legitimamente na decisão e por isso são monitorados.
+# Renda não é atributo protegido: além de compor o contexto, ela governa a elegibilidade
+# (`renda_percentil_min` nos filtros do catálogo), e avaliar capacidade financeira é exigência
+# de suitability. Registrá-la aqui deixa explícito no log que é uso consciente e fiscalizável —
+# a checagem de fairness sobre ela é de *exposição por faixa de renda*, não de exclusão.
+MONITORED_ATTRIBUTES = ["renda_estimada_anual_brl"]
 
 
 class ArmNotEligible(Exception):
@@ -102,11 +109,24 @@ class BanditEngine:
         )
 
     # ── aprendizado ──────────────────────────────────────────────
-    def reward_value(self, arm_id: str, click: float | int | bool) -> float:
-        """Recompensa composta (receita+clique) do braço, para realimentar a política."""
+    def reward_value(
+        self,
+        arm_id: str,
+        click: float | int | bool,
+        reward_definition: Mapping[str, Any] | None = None,
+    ) -> float:
+        """Recompensa composta (receita+clique) do braço, para realimentar a política.
+
+        `reward_definition` da **política ativa** tem precedência sobre a do catálogo: é o que
+        permite versionar formas de recompensa (ex.: uma política que pesa mais o clique que a
+        receita) e garante que o valor gravado corresponda à definição que a política declara.
+        Sem ela, cai no default do `offer_catalog.json`.
+        """
         offer = self.offers.get(arm_id, {})
         return composite_reward(
-            offer.get("expected_revenue_brl", 0.0), click, self.reward_definition
+            offer.get("expected_revenue_brl", 0.0),
+            click,
+            reward_definition or self.reward_definition,
         )
 
     def update(
@@ -139,6 +159,7 @@ class BanditEngine:
             "renda_percentil": round(renda_pct, 2),
             "ofertas_elegiveis": eligible,
             "atributos_excluidos": PROTECTED_ATTRIBUTES,
+            "atributos_monitorados": MONITORED_ATTRIBUTES,
         }
 
 

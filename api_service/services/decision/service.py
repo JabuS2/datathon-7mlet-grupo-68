@@ -169,10 +169,16 @@ class DecisionService:
             # click = houve evento de clique OU o cliente converteu
             events = await self.uow.eventos_impressao.list_by_decision(decision_id)
             clicked = any(e.type == TipoEvento.CLICK for e in events) or converted
+            # A definição de recompensa é da POLÍTICA que gerou a decisão (não da política ativa
+            # nem só do catálogo): recompensa atrasada pode chegar depois de uma promoção, e o
+            # valor tem de refletir a regra sob a qual a decisão foi tomada.
+            reward_definition = (policy.hyperparams or {}).get("reward_definition")
             reward_value = (
                 float(value)
                 if value is not None
-                else self.rt.engine.reward_value(decision.chosen_arm_id, clicked)
+                else self.rt.engine.reward_value(
+                    decision.chosen_arm_id, clicked, reward_definition
+                )
             )
 
             # aprendizado: atualiza o estado do braço (LinUCB A/b, Thompson α/β, UCB n/sum)

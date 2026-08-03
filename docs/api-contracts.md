@@ -100,9 +100,20 @@ Realimenta o bandit; pode chegar **atrasado** (`status="pending"` até observar 
 **Request** (`RewardRequest`): `{ "decisionId": "b1f2…", "converted": true }`
 **Response 200** (`RewardResponse`): `{ "rewardId": "…", "decisionId": "b1f2…", "value": 0.71, "status": "observed" }`
 
+O `value` é calculado pelo `reward_definition` da **política que gerou a decisão** (de
+`politica.hyperparams`), com fallback para o do `offer_catalog.json`. Não é o da política ativa
+no momento do reward: recompensa atrasada pode chegar depois de uma promoção, e o valor precisa
+refletir a regra vigente quando a decisão foi tomada. Enviar `value` no request sobrescreve o
+cálculo — use só para replay/backfill.
+
 ### `GET /decisions/{decisionId}` — visão auditável
-**Response 200** (`DecisaoResponse`): decisão completa com `context` (features que entraram — LGPD),
-`reasonCodes`, `chosenArmId`, `policyVersion`, `score`, `createdAt`.
+**Response 200** (`DecisaoResponse`): decisão completa com `context`, `reasonCodes`,
+`chosenArmId`, `policyVersion`, `score`, `createdAt`.
+
+O `context` traz os dois regimes de conformidade (ver `domain-model.md`):
+`atributos_excluidos: ["sexo"]` (protegido, nunca entra) e
+`atributos_monitorados: ["renda_estimada_anual_brl"]` (sensível, entra de forma legítima e é
+acompanhado por fairness de exposição).
 
 ---
 
