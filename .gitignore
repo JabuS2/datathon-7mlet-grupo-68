@@ -61,3 +61,7 @@ data/synthetic_enrichment/*.parquet
 
 # MkDocs build output
 site/
+
+# backups de .env (nunca versionar — contêm segredos)
+.env.bak*
+.env.*.bak
