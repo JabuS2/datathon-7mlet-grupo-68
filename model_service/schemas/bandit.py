@@ -9,6 +9,13 @@ class RankRequest(BaseModel):
     algorithm: str | None = Field(
         default=None, description="linucb | thompson | baseline (default do serviço)"
     )
+    policy_id: str | None = Field(
+        default=None,
+        description=(
+            "Política a servir. Omitido: usa a `active`; sem nenhuma política registrada, "
+            "cai na política implícita `auto-{algorithm}`."
+        ),
+    )
     client: dict[str, Any] = Field(
         description="Features do cliente (idade, renda_estimada_anual_brl, flags possui_*, etc.)"
     )
@@ -33,11 +40,15 @@ class RankedOffer(BaseModel):
 
 class RankResponse(BaseModel):
     algorithm: str
+    policy_id: str
     ranked: list[RankedOffer]
 
 
 class UpdateRequest(BaseModel):
     algorithm: str | None = None
+    policy_id: str | None = Field(
+        default=None, description="Mesma resolução do /rank — omitido usa a política `active`."
+    )
     arm_id: str
     reward: float = Field(description="Reward = click (0 ou 1)")
     client: dict[str, Any] = Field(default_factory=dict)
@@ -46,5 +57,6 @@ class UpdateRequest(BaseModel):
 
 class UpdateResponse(BaseModel):
     algorithm: str
+    policy_id: str
     arm_id: str
     status: str

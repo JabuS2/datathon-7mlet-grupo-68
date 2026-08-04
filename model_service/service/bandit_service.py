@@ -15,6 +15,7 @@ from models import (
     ThompsonSampling,
     model_from_state,
 )
+from service.policy_resolver import ResolvedPolicy, auto_policy
 from store.state_store import StateStore
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,12 @@ class BanditService:
 
     Loop de aprendizado (compute-on-read): ``update`` muta o estado no Redis; o próximo
     ``rank`` re-ranqueia com o estado atualizado. Não há materialização/pré-cálculo.
+
+    O estado é **escopado por política** (`ResolvedPolicy`), não por algoritmo: é o que
+    permite duas versões do mesmo algoritmo coexistirem como `active` e `shadow` com pesos
+    independentes. Quem resolve a política é `service.policy_resolver`; aqui ela chega
+    pronta. Sem governança configurada, o resolver devolve a política implícita
+    `auto-{algorithm}` e o comportamento é idêntico ao anterior.
     """
 
     def __init__(self, catalog: Catalog, store: StateStore, default_algorithm: str = "linucb"):
@@ -75,13 +82,20 @@ class BanditService:
             return DeterministicBaseline(self.catalog.categories)
         raise BadRequest(f"Algoritmo inválido: {algorithm!r}", code="INVALID_ALGORITHM")
 
-    async def _load_or_init(self, algorithm: str, dim: int) -> BanditModel:
-        state = await self.store.load_state(algorithm)
+    async def _load_or_init(self, policy: ResolvedPolicy, dim: int) -> BanditModel:
+        state = await self.store.load_state(policy.policy_id)
         if state is not None:
             return model_from_state(state)
-        model = self._fresh_model(algorithm, dim)
-        await self.store.save_state(algorithm, model.get_state())
+        model = self._fresh_model(policy.algorithm, dim)
+        await self.store.save_state(policy.policy_id, model.get_state())
         return model
+
+    def _policy_or_auto(self, policy: ResolvedPolicy | None, algorithm: str | None):
+        """Compat: chamada sem política resolvida cai na política implícita do algoritmo."""
+        if policy is not None:
+            self._resolve_algorithm(policy.algorithm)
+            return policy
+        return auto_policy(self._resolve_algorithm(algorithm))
 
     # ------------------------------------------------------------------ API
     async def rank(
@@ -91,10 +105,11 @@ class BanditService:
         segments: list[str],
         top: int | None = None,
         exclude_arm_ids: list[str] | None = None,
+        policy: ResolvedPolicy | None = None,
     ) -> dict[str, Any]:
-        algo = self._resolve_algorithm(algorithm)
+        pol = self._policy_or_auto(policy, algorithm)
         cb = await self._ctx_builder()
-        model = await self._load_or_init(algo, cb.dim)
+        model = await self._load_or_init(pol, cb.dim)
 
         mask = self.catalog.eligibility_mask(client)
         exclude: list[int] = []
@@ -126,7 +141,7 @@ class BanditService:
             )
         if top is not None:
             results = results[:top]
-        return {"algorithm": algo, "ranked": results}
+        return {"algorithm": pol.algorithm, "policy_id": pol.policy_id, "ranked": results}
 
     async def update(
         self,
@@ -135,39 +150,111 @@ class BanditService:
         reward: float,
         client: dict[str, Any],
         segments: list[str],
+        policy: ResolvedPolicy | None = None,
     ) -> dict[str, Any]:
-        algo = self._resolve_algorithm(algorithm)
+        pol = self._policy_or_auto(policy, algorithm)
         arm_index = self.catalog.index_of(arm_id)
         if arm_index is None:
             raise NotFound(f"arm_id desconhecido: {arm_id!r}", code="ARM_NOT_FOUND")
 
         cb = await self._ctx_builder()
-        # lock por modelo: serializa o read-modify-write do estado
-        async with self.store.lock(algo):
-            model = await self._load_or_init(algo, cb.dim)
+        # lock por política: serializa o read-modify-write do estado
+        async with self.store.lock(pol.policy_id):
+            model = await self._load_or_init(pol, cb.dim)
             ctx = self._context(cb, client, segments)
             model.update(arm_index, reward, ctx)
-            await self.store.save_state(algo, model.get_state())
+            await self.store.save_state(pol.policy_id, model.get_state())
 
         logger.info(
             "bandit_update",
-            extra={"algorithm": algo, "arm_id": arm_id, "reward": reward},
+            extra={
+                "algorithm": pol.algorithm,
+                "policy_id": pol.policy_id,
+                "arm_id": arm_id,
+                "reward": reward,
+            },
         )
-        return {"algorithm": algo, "arm_id": arm_id, "status": "updated"}
+        return {
+            "algorithm": pol.algorithm,
+            "policy_id": pol.policy_id,
+            "arm_id": arm_id,
+            "status": "updated",
+        }
 
-    async def reset(self, algorithm: str | None) -> None:
-        algo = self._resolve_algorithm(algorithm)
-        await self.store.delete_state(algo)
+    async def reset(self, algorithm: str | None, policy: ResolvedPolicy | None = None) -> None:
+        pol = self._policy_or_auto(policy, algorithm)
+        await self.store.delete_state(pol.policy_id)
 
-    async def snapshot_state(self, algorithm: str | None) -> dict[str, Any]:
-        """Retorna o estado atual do modelo (inicializando se necessário) — para o registry."""
-        algo = self._resolve_algorithm(algorithm)
+    async def snapshot_state(
+        self, algorithm: str | None, policy: ResolvedPolicy | None = None
+    ) -> dict[str, Any]:
+        """Estado atual do modelo da política (inicializando se necessário) — para o registry."""
+        pol = self._policy_or_auto(policy, algorithm)
         cb = await self._ctx_builder()
-        model = await self._load_or_init(algo, cb.dim)
+        model = await self._load_or_init(pol, cb.dim)
         return model.get_state()
 
-    async def restore_state(self, algorithm: str | None, state: dict[str, Any]) -> None:
-        """Sobrescreve o estado do modelo no Redis (ex.: carregado do MLflow)."""
-        algo = self._resolve_algorithm(algorithm)
-        async with self.store.lock(algo):
-            await self.store.save_state(algo, state)
+    async def restore_state(
+        self, algorithm: str | None, state: dict[str, Any], policy: ResolvedPolicy | None = None
+    ) -> None:
+        """Sobrescreve o estado da política no Redis (ex.: carregado do MLflow)."""
+        pol = self._policy_or_auto(policy, algorithm)
+        async with self.store.lock(pol.policy_id):
+            await self.store.save_state(pol.policy_id, state)
+
+    async def arm_states(
+        self, policy: ResolvedPolicy, dim: int | None = None
+    ) -> list[dict[str, Any]]:
+        """Projeta o estado da política como uma linha por braço.
+
+        Substitui a tabela `estados_braco` do api_service: os pesos já estão no estado
+        serializado do modelo, então materializá-los em Postgres criaria uma segunda cópia
+        divergindo a cada `/update`.
+        """
+        cb = await self._ctx_builder()
+        model = await self._load_or_init(policy, dim or cb.dim)
+        state = model.get_state()
+        return self._project_arms(state)
+
+    def _project_arms(self, state: dict[str, Any]) -> list[dict[str, Any]]:
+        """Extrai os parâmetros por braço do estado serializado.
+
+        `params` é **específico do algoritmo** de propósito: o `alpha` do LinUCB é fator de
+        exploração e o do Thompson é parâmetro da Beta. Achatar os dois num campo comum
+        (como fazia `estados_braco`, com colunas polimórficas) faz o número de um algoritmo
+        ser lido com o significado do outro.
+        """
+        name = state.get("name")
+        rows: list[dict[str, Any]] = []
+        for idx in range(self.catalog.n_arms):
+            offer = self.catalog.offer(idx)
+            rows.append(
+                {
+                    "arm_id": offer["arm_id"],
+                    "algorithm": name,
+                    "params": self._arm_params(name, state, idx),
+                }
+            )
+        return rows
+
+    @staticmethod
+    def _arm_params(name: Any, state: dict[str, Any], idx: int) -> dict[str, Any]:
+        def at(key: str) -> float | None:
+            seq = state.get(key) or []
+            return float(seq[idx]) if idx < len(seq) else None
+
+        if name == "thompson":
+            alpha, beta = at("alpha"), at("beta")
+            mean = alpha / (alpha + beta) if alpha is not None and beta else None
+            return {"alpha": alpha, "beta": beta, "mean": mean}
+
+        if name == "linucb":
+            b = (state.get("b") or [None])[idx] if idx < len(state.get("b") or []) else None
+            b_norm = float(sum(v * v for v in b) ** 0.5) if b else 0.0
+            return {"exploration_alpha": at("alpha"), "b_norm": round(b_norm, 6)}
+
+        if name == "baseline":
+            cats = state.get("arm_categories") or []
+            return {"category": cats[idx] if idx < len(cats) else None}
+
+        return {}

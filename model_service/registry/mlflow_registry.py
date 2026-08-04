@@ -13,7 +13,7 @@ from mlflow.tracking import MlflowClient
 logger = logging.getLogger(__name__)
 
 
-class _BanditArtifact(mlflow.pyfunc.PythonModel):
+class _BanditArtifact(mlflow.pyfunc.PythonModel):  # type: ignore[name-defined]
     """Wrapper pyfunc que carrega o estado (JSON) do bandit de um artefato.
 
     O estado é totalmente serializável (A_inv/b, alpha/beta, mu/sd), então versioná-lo

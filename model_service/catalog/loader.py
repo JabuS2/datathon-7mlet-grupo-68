@@ -66,7 +66,7 @@ class Catalog:
             sd = np.where(sd == 0.0, 1.0, sd)
             income = np.sort(df["renda_estimada_anual_brl"].astype(float).to_numpy())
             return mu, sd, income
-        except Exception:  # noqa: BLE001 - degrada com log, não derruba o serviço
+        except Exception:  # degrada com log, não derruba o serviço
             logger.exception("Falha ao computar stats do golden_clients.csv; usando defaults.")
             return np.zeros(n), np.ones(n), None
 
