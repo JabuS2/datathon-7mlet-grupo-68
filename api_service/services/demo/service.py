@@ -26,6 +26,12 @@ from services.demo.segments import compute_segments
 # Faixa reservada de ids p/ perfis criados na vitrine (rastreáveis / purgáveis — LGPD).
 DEMO_COD_BASE = 9_000_000
 
+#: Saldo exibido na vitrine = este múltiplo da renda MENSAL.
+#: É cosmético (nunca entra na decisão — ver `models/user.py`), mas não pode ser aleatório:
+#: derivado da renda respondida, o número fica coerente com o perfil e a demo é
+#: reproduzível. Antes ficava `NULL` e a tela mostrava "R$" sem valor.
+SALDO_MESES_DE_RENDA = 2.5
+
 
 class OnboardingService:
     def __init__(self, uow: UnitOfWork, jwt: JwtToken):
@@ -46,6 +52,7 @@ class OnboardingService:
                 hashed_password=self.jwt.hash_password(req.password),
                 tipo=TipoUsuario.DEMO,
                 cod_cliente=cliente.cod_cliente,
+                saldo_ficticio=self._saldo_ficticio(cliente.renda_estimada_anual_brl),
             )
             self.uow.users.add(user)
             await self.uow.session.flush()  # materializa user.id
@@ -72,6 +79,7 @@ class OnboardingService:
                 fresh.cod_cliente = cliente.cod_cliente
                 # a conta passa a ser um cliente da vitrine, não um operador
                 fresh.tipo = TipoUsuario.DEMO
+                fresh.saldo_ficticio = self._saldo_ficticio(cliente.renda_estimada_anual_brl)
             await self.uow.session.flush()
             return ClienteResponse.model_validate(cliente)
 
@@ -91,6 +99,13 @@ class OnboardingService:
         )
         percentil = await self.uow.clientes.renda_percentil(renda)
         return self._from_template(template, req, cod_cliente, renda, percentil)
+
+    @staticmethod
+    def _saldo_ficticio(renda_anual: float | None) -> float:
+        """Saldo de exibição a partir da renda anual respondida."""
+        if not renda_anual:
+            return 0.0
+        return round(renda_anual / 12 * SALDO_MESES_DE_RENDA, 2)
 
     @staticmethod
     def _next_demo_cod(max_demo: int | None) -> int:

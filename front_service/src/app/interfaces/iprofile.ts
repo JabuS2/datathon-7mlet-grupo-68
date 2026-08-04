@@ -10,7 +10,8 @@ export interface IProfileResponse extends IBase {
   segmentosSinteticos: string[];
   origem: string;
   rendaEstimadaAnualBrl: number;
-  saldoFicticio: number;
+  /** `null` em perfis criados antes de o saldo passar a ser preenchido. */
+  saldoFicticio: number | null;
 
   produtos: IProdutosCliente;
 }
