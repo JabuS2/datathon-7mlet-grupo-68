@@ -83,6 +83,13 @@
           }
         </button>
       </article>
+    } @empty {
+      <!-- Vitrine vazia é estado esperado: produto adquirido sai do ranking, então quem
+           contratou tudo não tem mais o que ver. Sem esta mensagem parecia erro. -->
+      <p class="col-span-full py-6 text-sm text-gray-400">
+        Você já demonstrou interesse em todas as ofertas disponíveis para o seu perfil. Elas
+        estão na sua carteira, abaixo.
+      </p>
     }
   </div>
 

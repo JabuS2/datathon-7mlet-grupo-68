@@ -5,6 +5,8 @@ import { API_BASE_URL } from '../core/api';
 
 /** `GET /api/v1/me` — a conta autenticada. */
 export interface IAccount {
+  /** Necessário para o approval gate, que registra quem aprovou. */
+  id: number | null;
   email: string;
   tipo: string;
   /** `null` enquanto a pessoa não completou o perfil (é o sinal do profileGuard). */

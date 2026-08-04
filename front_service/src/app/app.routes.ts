@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './components/login/login';
 import { Admin } from './components/admin/admin';
 import { authGuard } from './guard/auth-guard';
+import { operadorGuard } from './guard/operador-guard';
 import { profileGuard } from './guard/profile-guard';
 import { RegisterComponent } from './components/register/register';
 import { OnboardingComponent } from './components/onboarding/onboarding';
@@ -25,9 +26,10 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    // Console de operação do modelo — só operador (o backend também recusa `demo`).
     path: 'admin',
     component: Admin,
-    canActivate: [authGuard],
+    canActivate: [authGuard, operadorGuard],
   },
   {
     path: 'dashboard',
