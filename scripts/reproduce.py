@@ -3,7 +3,7 @@
 Comando único que, com o Postgres no ar (`docker-compose up -d postgres`), executa:
   1. migrações Alembic (`upgrade head`)
   2. seed do catálogo, políticas, priors e um subset de clientes
-  3. um ciclo de decisão auditável: /decide -> /feedback (clique) -> /reward (aprendizado)
+  3. um ciclo de decisão auditável: decide -> clique -> reward (aprendizado)
 
 Imprime o braço escolhido, a justificativa (reason codes), a versão da política e o registro
 auditável — exatamente a evidência que a banca precisa ver.
@@ -76,10 +76,10 @@ async def _run() -> None:
     svc, s = await _fresh_service()
     await svc.feedback(decision.decision_id, TipoEvento.CLICK)
     await s.close()
-    print("   /feedback  clique registrado")
+    print("   clique registrado  (DecisionService.feedback — via HTTP: POST /me/feedback)")
 
     svc, s = await _fresh_service()
-    rw = await svc.reward(decision.decision_id, converted=True, value=None)
+    rw = await svc.reward(decision.decision_id, converted=True)
     await s.close()
     print(f"   /reward  value={rw.value:.4f} status={rw.status}  (bandit atualizado)")
 

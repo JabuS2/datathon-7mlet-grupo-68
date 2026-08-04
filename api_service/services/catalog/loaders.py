@@ -16,11 +16,13 @@ from models.cliente import PRODUCT_FLAGS
 # ─────────────────────────── catálogo de ofertas ───────────────────────────
 
 
-def load_offer_catalog(path: str | Path) -> tuple[dict, list[dict]]:
-    """Lê `offer_catalog.json` → (reward_definition, lista de kwargs de `Oferta`)."""
+def load_offer_catalog(path: str | Path) -> list[dict]:
+    """Lê `offer_catalog.json` → lista de kwargs de `Oferta`.
+
+    O `catalog_metadata.reward_definition` do arquivo é ignorado: a recompensa é binária
+    (clique/conversão), então não há pesos de receita a parametrizar.
+    """
     data = json.loads(Path(path).read_text(encoding="utf-8"))
-    meta = data.get("catalog_metadata", {})
-    reward_definition = meta.get("reward_definition", {})
 
     offers: list[dict] = []
     for off in data.get("offers", []):
@@ -38,7 +40,7 @@ def load_offer_catalog(path: str | Path) -> tuple[dict, list[dict]]:
                 ),
             }
         )
-    return reward_definition, offers
+    return offers
 
 
 # ─────────────────────────── segmentos sintéticos ───────────────────────────

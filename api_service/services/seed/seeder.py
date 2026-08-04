@@ -1,6 +1,6 @@
 """Seed idempotente do Postgres a partir dos dados de referência (catálogo + golden set).
 
-Popula: ofertas (10 braços), segmentos sintéticos, políticas (baseline/thompson/ucb/linucb) com
+Popula: ofertas (10 braços), segmentos sintéticos, políticas (baseline/thompson/linucb) com
 os priors de `estado_braco` por braço, o subset de clientes (`origem='seed'`) e — se existir —
 os casos do golden set. Reexecutar não duplica: cada bloco só insere o que ainda falta.
 """
@@ -25,7 +25,7 @@ from services.catalog.loaders import (
 )
 
 # Políticas semeadas: LinUCB é a ativa (catálogo prod); as demais nascem em shadow para a
-# comparação da Etapa 3 (baseline vs Thompson vs UCB vs contextual).
+# comparação da Etapa 3 (baseline vs Thompson vs contextual).
 SEED_POLICIES: list[tuple[str, AlgoritmoPolitica, StatusPolitica, dict]] = [
     (
         "baseline-v1",
@@ -34,7 +34,6 @@ SEED_POLICIES: list[tuple[str, AlgoritmoPolitica, StatusPolitica, dict]] = [
         {"rule": "best_expected_revenue"},
     ),
     ("thompson-v1", AlgoritmoPolitica.THOMPSON, StatusPolitica.SHADOW, {}),
-    ("ucb-v1", AlgoritmoPolitica.UCB, StatusPolitica.SHADOW, {}),
     ("linucb-v1", AlgoritmoPolitica.LINUCB, StatusPolitica.ACTIVE, {"alpha_scale": 0.2}),
 ]
 
@@ -51,7 +50,7 @@ async def seed_all(
 ) -> dict[str, int]:
     """Executa todos os blocos dentro da transação da `uow`. Devolve contagem de inserções."""
     golden = _golden_dir(data_dir)
-    reward_definition, offers = load_offer_catalog(golden / "offer_catalog.json")
+    offers = load_offer_catalog(golden / "offer_catalog.json")
 
     counts = {
         "ofertas": await _seed_offers(uow, offers),
@@ -66,9 +65,7 @@ async def seed_all(
         ),
     }
     arm_ids = [o["arm_id"] for o in offers]
-    counts["politicas"], counts["estados_braco"] = await _seed_policies(
-        uow, arm_ids, reward_definition
-    )
+    counts["politicas"], counts["estados_braco"] = await _seed_policies(uow, arm_ids)
     return counts
 
 
@@ -90,25 +87,22 @@ async def _seed_segments(uow: UnitOfWork, segments: list[dict]) -> int:
     return inserted
 
 
-async def _seed_policies(
-    uow: UnitOfWork, arm_ids: list[str], reward_definition: dict
-) -> tuple[int, int]:
+async def _seed_policies(uow: UnitOfWork, arm_ids: list[str]) -> tuple[int, int]:
     pol_inserted = 0
     arm_inserted = 0
     for policy_id, algorithm, status, hyper in SEED_POLICIES:
         if await uow.politicas.get_by_policy_id(policy_id) is None:
-            hyperparams: dict = {**hyper, "reward_definition": reward_definition}
             uow.politicas.add(
                 Politica(
                     policy_id=policy_id,
                     version="1.0.0",
                     algorithm=algorithm,
-                    hyperparams=hyperparams,
+                    hyperparams=dict(hyper),
                     status=status,
                 )
             )
             pol_inserted += 1
-        # Priors por braço (cold-start): Thompson α=β=1; UCB zerado; LinUCB A/b nulos.
+        # Priors por braço (cold-start): Thompson α=β=1; LinUCB A/b nulos.
         for arm_id in arm_ids:
             if await uow.estados_braco.get(policy_id, arm_id) is None:
                 uow.estados_braco.add(EstadoBraco(policy_id=policy_id, arm_id=arm_id))

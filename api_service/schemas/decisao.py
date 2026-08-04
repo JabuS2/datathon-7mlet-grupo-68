@@ -90,11 +90,14 @@ class FeedbackResponse(BaseSchema):
 
 
 class RewardRequest(BaseSchema):
-    """Resultado de uma decisão (adoção do produto). Pode chegar atrasado (delayed reward)."""
+    """Resultado de uma decisão (adoção do produto). Pode chegar atrasado (delayed reward).
+
+    A recompensa é binária e derivada aqui: 1.0 se houve clique ou conversão, 0.0 caso
+    contrário. Não há valor arbitrado pelo chamador.
+    """
 
     decision_id: UUID
     converted: bool = True
-    value: float | None = None  # se omitido, o serviço deriva do reward composto
 
 
 class RewardResponse(BaseSchema):

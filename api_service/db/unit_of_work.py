@@ -6,11 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from repositories.aprovacao_humana import AprovacaoHumanaRepository
 from repositories.caso_avaliacao import CasoAvaliacaoRepository
 from repositories.ciclo_retreino import CicloRetreinoRepository
+from repositories.client_profile import ClientProfileRepository
 from repositories.cliente import ClienteRepository
 from repositories.decisao import DecisaoRepository
 from repositories.estado_braco import EstadoBracoRepository
 from repositories.evento_impressao import EventoImpressaoRepository
 from repositories.experimento import ExperimentoRepository
+from repositories.feedback import FeedbackRepository
 from repositories.metrica_monitoramento import MetricaMonitoramentoRepository
 from repositories.oferta import OfertaRepository
 from repositories.politica import PoliticaRepository
@@ -103,6 +105,15 @@ class UnitOfWork:
     @property
     def aprovacoes_humanas(self) -> AprovacaoHumanaRepository:
         return self._repo("aprovacoes_humanas", AprovacaoHumanaRepository)
+
+    # ── Ofertas/feedback (fluxo servido pelo model_service) ──────
+    @property
+    def profiles(self) -> ClientProfileRepository:
+        return self._repo("profiles", ClientProfileRepository)
+
+    @property
+    def feedback(self) -> FeedbackRepository:
+        return self._repo("feedback", FeedbackRepository)
 
     # ── Transação ────────────────────────────────────────────────
     async def __aenter__(self):

@@ -5,20 +5,38 @@ Todos os serviços de infra estão disponíveis em dois targets: Docker Compose
 
 | Serviço | Docker Compose | Kubernetes (NodePort) |
 | --- | --- | --- |
-| FastAPI | http://localhost:8001 | http://localhost:30800 |
+| api_service (FastAPI) | http://localhost:8001 | http://localhost:30800 |
+| model_service (bandits) | http://localhost:8002 | — (sem chart) |
+| MLflow | http://localhost:5000 | — (sem chart) |
+| front_service (Angular) | http://localhost:4200 | — (sem chart) |
+| dashboard (Next) | http://localhost:3000 | — (sem chart) |
+| agent_service | http://localhost:8100 | — (sem chart) |
+| mcp_server | http://localhost:8200 | — (sem chart) |
 | PostgreSQL | localhost:5432 | localhost:5432 (port-forward) |
 | pgAdmin 4 | http://localhost:5050 | http://localhost:30050 |
 | Redis | localhost:6379 | localhost:6379 (port-forward) |
-| OpenSearch | https://localhost:9200 | https://localhost:9200 (port-forward) |
-| OpenSearch Dashboards | http://localhost:5601 | http://localhost:30601 |
-| Neo4j Browser | http://localhost:7474 | http://localhost:30474 |
-| Neo4j Bolt | localhost:7687 | localhost:30687 |
+| Datadog Agent (APM) | localhost:8126 | — (sem chart) |
+
+> **OpenSearch e Neo4j não estão provisionados.** Sobraram variáveis em
+> `.env.example`/`api_service/settings.py` e exemplos de secret em
+> `infra/k8s/secrets/` de um desenho anterior (RAG + grafo). Nenhum serviço do
+> compose ou do código usa esses valores hoje.
+>
+> **O Helm chart só cobre o `api_service`.** Os demais serviços rodam apenas via compose.
 
 ## Docker Compose
 
 ```bash
 cp .env.example .env
-docker-compose up -d
+
+# stack de backend (api + model + postgres + redis + mlflow)
+docker-compose --profile api up -d
+
+# + assistente administrativo (dashboard, agent_service, mcp_server)
+docker-compose --profile app up -d
+
+# + coleta Datadog (requer DD_API_KEY no .env)
+docker-compose --profile api --profile datadog up -d
 ```
 
 ## Kubernetes (Helm + Helmfile)

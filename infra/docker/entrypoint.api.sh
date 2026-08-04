@@ -53,4 +53,4 @@ else
 fi
 
 echo "Starting API server ..."
-exec uvicorn main:app --host 0.0.0.0 --port 8000
+exec ddtrace-run uvicorn main:app --host 0.0.0.0 --port 8000

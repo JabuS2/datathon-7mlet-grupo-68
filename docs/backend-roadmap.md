@@ -2,13 +2,27 @@
 
 Arquivo-guia da construção **incremental** do backend. Cada etapa (`Ex`) tem um objetivo, os
 artefatos e um critério de "feito". Marque o checkbox ao concluir. Alinhado ao **catálogo real**
-(`data/golden_set/offer_catalog.json` v2.0.0-prod): **LinUCB + reward composto**
-(`0.6·receita/vmax + 0.4·clique`). Decisões de modelagem:
+(`data/golden_set/offer_catalog.json` v2.0.0-prod): **LinUCB + reward binário** (clique).
+
+> **Atualizações posteriores a este roadmap** (branch `feat/model-service-mlflow-datadog`):
+> - **Reward composto removido.** Era `0.6·receita/vmax + 0.4·clique`, parametrizável por
+>   `reward_definition`. Hoje é binário: `1.0` com clique/conversão, `0.0` sem. Saíram
+>   `services/bandit/reward.py`, o campo `RewardRequest.value` e o `reward_definition` dos
+>   `hyperparams` das políticas.
+> - **UCB removido.** Restam três políticas: `baseline`, `thompson`, `linucb`.
+> - **Bandit também vive fora do api_service:** o `model_service` serve `/rank` e `/update`
+>   com estado em Redis e registry no MLflow. Hoje os dois coexistem — o in-process
+>   (`services/bandit` + `services/decision`) atende `/decide`, `/showcase` e `/me/*`; o
+>   model_service atende `/offers` e `/feedback`. Consolidar é decisão em aberto.
+> - **Observabilidade:** logs JSON + Datadog (APM e coleta de logs) em `api_service` e
+>   `model_service` — ver `docs/observability-datadog.md`.
+
+Decisões de modelagem:
 
 - `canal` → **enum** em `decisao` (não é tabela).
 - `variante_mensagem` → **removida** (catálogo não tem variantes por canal).
-- `estado_braco` → colunas **polimórficas** (thompson α/β · ucb n/sum · linucb A/b) para cobrir a
-  Etapa 3 do PDF (referência a Thompson Sampling e Nilos-UCB), mesmo com política ativa LinUCB.
+- `estado_braco` → colunas **polimórficas** (thompson α/β · n_pulls/sum_reward · linucb A/b) para
+  cobrir a Etapa 3 do PDF (referência a Thompson Sampling), mesmo com política ativa LinUCB.
 
 Convenções: nomes de domínio em **português**; pacote raiz é `api_service/` (imports `from models...`,
 `from schemas...`); reuso de `BaseModel`/`Base` (`models/base.py`), `BaseRepository`,

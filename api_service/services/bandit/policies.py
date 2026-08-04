@@ -1,4 +1,4 @@
-"""As quatro políticas de decisão. Operam sobre `ArmState` + vetor de contexto `x` (numpy).
+"""As três políticas de decisão. Operam sobre `ArmState` + vetor de contexto `x` (numpy).
 
 Cada `rank` devolve `RankedArm` ordenados por score desc; cada `update` realimenta o estado do
 braço com a recompensa observada. Todas atualizam `n_pulls`/`sum_reward` (bookkeeping comum).
@@ -84,43 +84,6 @@ class ThompsonPolicy(Policy):
         self._bookkeep(state, reward)
 
 
-class UCBPolicy(Policy):
-    """UCB1: média empírica + bônus `c·sqrt(2·ln(N)/n_j)`. Braço não puxado tem prioridade."""
-
-    algorithm = AlgoritmoPolitica.UCB
-
-    def rank(self, x: np.ndarray, states: list[ArmState]) -> list[RankedArm]:
-        total = sum(s.n_pulls for s in states)
-        log_total = np.log(total) if total > 0 else 0.0
-        ranked = []
-        for s in states:
-            if s.n_pulls == 0:
-                ranked.append(
-                    RankedArm(
-                        arm_id=s.arm_id,
-                        score=float("inf"),
-                        bonus=float("inf"),
-                        reason_codes=["policy:ucb", "cold_start"],
-                    )
-                )
-                continue
-            mean = s.sum_reward / s.n_pulls
-            bonus = s.exploration_factor * float(np.sqrt(2.0 * log_total / s.n_pulls))
-            ranked.append(
-                RankedArm(
-                    arm_id=s.arm_id,
-                    score=mean + bonus,
-                    pred=mean,
-                    bonus=bonus,
-                    reason_codes=["policy:ucb", _explore_or_exploit(bonus, mean)],
-                )
-            )
-        return sorted(ranked, key=lambda r: -r.score)
-
-    def update(self, state: ArmState, reward: float, x: np.ndarray) -> None:
-        self._bookkeep(state, reward)
-
-
 class LinUCBPolicy(Policy):
     """LinUCB contextual (porte do notebook): score = θᵀx + α·sqrt(xᵀA⁻¹x), θ = A⁻¹b.
 
@@ -189,8 +152,6 @@ def build_policy(
         return BaselinePolicy()
     if algorithm == AlgoritmoPolitica.THOMPSON:
         return ThompsonPolicy(rng=rng)
-    if algorithm == AlgoritmoPolitica.UCB:
-        return UCBPolicy()
     if algorithm == AlgoritmoPolitica.LINUCB:
         return LinUCBPolicy(dimension=dimension, scale=float(hyperparams.get("alpha_scale", 0.2)))
     raise ValueError(f"Algoritmo não suportado: {algorithm}")

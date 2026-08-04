@@ -1,4 +1,4 @@
-"""E6 — núcleo do bandit: elegibilidade, contexto, reward composto e as 4 políticas.
+"""E6 — núcleo do bandit: elegibilidade, contexto, reward binário e as 3 políticas.
 
 Testes controlados (matemática das políticas) + uma checagem sobre o golden set real.
 """
@@ -13,7 +13,6 @@ from services.bandit.context import SEG_KEYS, ReferenceStats
 from services.bandit.eligibility import is_eligible
 from services.bandit.engine import BanditEngine
 from services.bandit.policies import build_policy
-from services.bandit.reward import composite_reward
 from services.bandit.state import ArmState
 from services.catalog.loaders import iter_seed_clients, load_offer_catalog
 from settings import settings
@@ -34,8 +33,7 @@ CTX_COLS = [
 
 @pytest.fixture(scope="module")
 def catalog():
-    reward_def, offers = load_offer_catalog(GOLDEN / "offer_catalog.json")
-    return reward_def, offers
+    return load_offer_catalog(GOLDEN / "offer_catalog.json")
 
 
 @pytest.fixture(scope="module")
@@ -66,7 +64,7 @@ def test_eligibility_suffix_conventions():
 
 
 def test_eligibility_average_on_golden(catalog, clients):
-    _reward, offers = catalog
+    offers = catalog
     stats = ReferenceStats.fit(clients, CTX_COLS)
     counts = []
     for c in clients:
@@ -88,14 +86,13 @@ def test_context_dimension(clients):
     assert x[0] == 1.0  # bias
 
 
-# ── reward composto ──────────────────────────────────────────────
-def test_composite_reward():
-    rd = {"alpha": 0.6, "beta": 0.4, "v_max": 7000}
-    # sem clique: só termo de receita
-    assert composite_reward(7000, 0, rd) == pytest.approx(0.6)
-    # com clique: receita + clique
-    assert composite_reward(7000, 1, rd) == pytest.approx(1.0)
-    assert composite_reward(0, 1, rd) == pytest.approx(0.4)
+# ── reward binário ───────────────────────────────────────────────
+def test_binary_reward_is_click_only():
+    """A recompensa não depende mais da receita esperada do braço — só do clique."""
+    assert BanditEngine.reward_value(True) == 1.0
+    assert BanditEngine.reward_value(1) == 1.0
+    assert BanditEngine.reward_value(False) == 0.0
+    assert BanditEngine.reward_value(0) == 0.0
 
 
 # ── políticas ────────────────────────────────────────────────────
@@ -112,13 +109,6 @@ def test_baseline_picks_max_revenue():
     ranked = policy.rank(np.zeros(22), _states())
     assert ranked[0].arm_id == "B"  # maior receita esperada
     assert "best_expected_revenue" in ranked[0].reason_codes
-
-
-def test_ucb_prioritizes_unpulled():
-    policy = build_policy(AlgoritmoPolitica.UCB, dimension=22)
-    ranked = policy.rank(np.zeros(22), _states())
-    assert ranked[0].score == float("inf")  # braço não puxado tem prioridade
-    assert "cold_start" in ranked[0].reason_codes
 
 
 def test_thompson_deterministic_with_seed():
@@ -147,9 +137,9 @@ def test_linucb_cold_start_then_learns():
 
 
 def test_engine_decide_end_to_end(catalog, clients):
-    reward_def, offers = catalog
+    offers = catalog
     stats = ReferenceStats.fit(clients, CTX_COLS)
-    engine = BanditEngine(offers, stats, reward_def)
+    engine = BanditEngine(offers, stats)
     policy = build_policy(AlgoritmoPolitica.LINUCB, dimension=stats.dimension)
     states = [ArmState(o["arm_id"]) for o in offers]
     decision = engine.decide(clients[0], policy, states)

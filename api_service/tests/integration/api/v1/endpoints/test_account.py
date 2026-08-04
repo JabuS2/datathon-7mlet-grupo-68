@@ -25,6 +25,15 @@ async def _onboard(client, email: str) -> dict:
     return {"headers": {"Authorization": f"Bearer {body['accessToken']}"}, "body": body}
 
 
+async def _operador_headers(client, email: str) -> dict:
+    """Registrado pelo fluxo normal — tem papel operador, logo enxerga o catálogo interno."""
+    await client.post("/register", json={"email": email, "password": "segredo123"})
+    token = (
+        await client.post("/login", json={"email": email, "password": "segredo123"})
+    ).json()["accessToken"]
+    return {"Authorization": f"Bearer {token}"}
+
+
 @pytest.mark.asyncio
 async def test_full_self_service_journey(client, seeded):
     session = await _onboard(client, "user@demo.com")
@@ -41,17 +50,12 @@ async def test_full_self_service_journey(client, seeded):
     assert profile.status_code == 200
     assert profile.json()["codCliente"] == cod
 
-    # 3) vitrine de ofertas — sem parâmetros internos do bandit
-    offers = (await client.get("/offers", headers=h)).json()
-    assert len(offers) == 10
-    assert set(offers[0]) == {"armId", "productName", "description", "category"}
-
-    # 4) recebe sugestões (sem passar cod_cliente — vem do token)
+    # 3) recebe sugestões (sem passar cod_cliente — vem do token)
     recs = (await client.get("/me/recommendations", headers=h)).json()
     assert recs["codCliente"] == cod
     assert len(recs["items"]) >= 1
 
-    # 5) decide → feedback → reward, tudo escopado no usuário
+    # 4) decide → feedback → reward, tudo escopado no usuário
     decision = (await client.post("/me/decide", headers=h)).json()
     assert decision["armId"].startswith("OFF-")
     did = decision["decisionId"]
@@ -62,7 +66,7 @@ async def test_full_self_service_journey(client, seeded):
     rw = await client.post("/me/reward", json={"decisionId": did, "converted": True}, headers=h)
     assert rw.status_code == 200 and rw.json()["status"] == "observed"
 
-    # 6) histórico das próprias decisões
+    # 5) histórico das próprias decisões
     history = (await client.get("/me/decisions", headers=h)).json()
     assert any(d["decisionId"] == did for d in history)
 
@@ -134,7 +138,10 @@ async def test_decide_rejects_ineligible_arm(client, seeded):
 
     recs = (await client.get("/me/recommendations?top_k=10", headers=h)).json()
     elegiveis = {i["armId"] for i in recs["items"]}
-    todas = {o["armId"] for o in (await client.get("/offers", headers=h)).json()}
+    # o conjunto completo de braços vem do catálogo interno (a vitrine /offers agora é
+    # ranqueada pelo model_service e já chega filtrada por elegibilidade)
+    op = await _operador_headers(client, "op-inelegivel@demo.com")
+    todas = {o["armId"] for o in (await client.get("/offers/catalog", headers=op)).json()}
     inelegiveis = todas - elegiveis
     assert inelegiveis, "cenário exige ao menos uma oferta inelegível para este perfil"
 
@@ -144,19 +151,16 @@ async def test_decide_rejects_ineligible_arm(client, seeded):
 
 
 @pytest.mark.asyncio
-async def test_offers_hides_bandit_internals_from_demo(client, seeded):
-    """A vitrine não expõe receita esperada, fator de exploração nem regras de elegibilidade.
+async def test_offers_catalog_is_blocked_for_demo(client, seeded):
+    """O catálogo interno do bandit continua barrado para o cliente demo.
 
     Regressão: `/offers` servia `OfertaResponse` a qualquer autenticado, entregando ao próprio
     cliente a régua comercial (`expectedRevenueBrl`) e como burlar o filtro (`eligibleSegment`).
+    A vitrine saiu deste módulo — quem serve `/offers` agora é `endpoints/offers.py` —, então
+    aqui sobra a metade que ainda pertence ao catálogo: só operador entra em `/offers/catalog`.
     """
     h = (await _onboard(client, "curioso@demo.com"))["headers"]
-    interno = {"expectedRevenueBrl", "ucbExplorationFactor", "contextFeatures", "eligibleSegment"}
 
-    offers = (await client.get("/offers", headers=h)).json()
-    assert all(interno.isdisjoint(o) for o in offers)
-
-    # e a rota interna é barrada para o demo
     resp = await client.get("/offers/catalog", headers=h)
     assert resp.status_code == 403
     assert resp.json()["code"] == "ROLE_NOT_ALLOWED"

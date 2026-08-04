@@ -27,15 +27,14 @@ describe('Investiment', () => {
     const mockResponse: RecommendationItem[] = [
       {
         armId: 'ARM-001',
+        rank: 1,
+        score: 0.8421,
         productName: 'CDB Conservador',
         description: 'Baixo risco para início de carteira.',
         category: ProductCategory.Investimento,
-        expectedRevenueBrl: 150.4,
-        contextFeatures: ['perfil', 'risco'],
-        eligibleSegment: {
-          santander_filters: {},
-        },
-        ucbExplorationFactor: 0.1,
+        valorTotal: 1000,
+        descontoPct: 5,
+        valorFinal: 950,
       },
     ];
 
@@ -43,7 +42,7 @@ describe('Investiment', () => {
       expect(response).toEqual(mockResponse);
     });
 
-    const request = httpMock.expectOne('http://localhost:8008/api/v1/offers');
+    const request = httpMock.expectOne('http://localhost:8001/api/v1/offers');
 
     expect(request.request.method).toBe('GET');
     request.flush(mockResponse);

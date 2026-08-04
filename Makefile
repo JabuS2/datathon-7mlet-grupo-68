@@ -1,4 +1,5 @@
-.PHONY: install infra migrate seed reproduce api test lint down run start-project
+.PHONY: install infra migrate seed reproduce api test lint down run start-project \
+        data data-processed data-synthetic data-golden notebooks
 
 API_DIR = api_service
 
@@ -41,6 +42,31 @@ down:
 
 run:
 	docker-compose up --build
+
+# ── Camadas de dados (ver data/README.md) ───────────────────────────────────
+# Só precisa rodar para regenerar o golden_set; ele já vem versionado.
+# Pré-requisito manual: baixar data/kaggle/train_ver2.csv (exige credencial Kaggle).
+
+# kaggle -> processed
+data-processed:
+	python scripts/prepare_data.py
+
+# processed -> synthetic_enrichment
+data-synthetic:
+	python scripts/generate_synthetic_br.py
+
+# synthetic_enrichment -> golden_set
+data-golden:
+	python scripts/generate_golden_sample.py
+
+# A cadeia inteira (assume o download do Kaggle já feito).
+data: data-processed data-synthetic data-golden
+
+# Executa os notebooks de análise ponta a ponta, descartando a saída (mesmo
+# smoke test do job `notebooks` no CI).
+notebooks:
+	MPLBACKEND=Agg jupyter nbconvert --execute --to notebook \
+		--output-dir /tmp/nbout notebooks/*.ipynb
 
 # Interactively fill in the required env vars (writes repo-root .env), bring the
 # whole stack up in Docker (infra + api + app: mcp_server/agent_service/dashboard

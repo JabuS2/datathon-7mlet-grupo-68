@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     # no Docker o compose monta ./data em /app/data (sobrescreva via env DATA_DIR).
     DATA_DIR: str = str(Path(__file__).resolve().parent.parent / "data")
 
+    ### Model Service (bandits)
+    MODEL_SERVICE_URL: str = "http://localhost:8002"
+    DEFAULT_ALGORITHM: str = "linucb"
+
     ### Database Settings
     # Se DATABASE_URL for definida, tem precedência sobre os POSTGRES_* (ex.: Docker/Compose).
     DATABASE_URL: str | None = None

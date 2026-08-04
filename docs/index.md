@@ -1,12 +1,16 @@
 # datathon-7mlet-grupo-68
 
-Plataforma de investimentos (HP Invest) com backend FastAPI, frontend Angular
-e um assistente administrativo baseado em agentes (LangChain + MCP +
-CopilotKit).
+Plataforma de investimentos (HP Invest) com backend FastAPI, serviço de modelos
+(multi-armed bandits) separado, frontend Angular e um assistente administrativo
+baseado em agentes (LangChain + MCP + CopilotKit).
 
 - **[Arquitetura do Admin Assistant](architecture/admin-assistant.md)** — fluxo
   completo dashboard → agent_service → mcp_server → api_service.
 - **[Serviços](services/api-service.md)** — como rodar cada componente.
+- **[Contratos de API](api-contracts.md)** — request/response por endpoint.
+- **[Modelo de domínio](domain-model.md)** — as tabelas e o porquê de cada uma.
+- **[Roadmap do backend](backend-roadmap.md)** — etapas E1–E12 e o que mudou depois.
+- **[Observabilidade](observability-datadog.md)** — logs JSON + Datadog.
 - **[Infraestrutura](infra.md)** — Docker Compose e Kubernetes.
 
 ## Tecnologias de Nuvem
@@ -23,11 +27,13 @@ single-instance no `docker-compose.yml`, ganhariam resiliência real com
 falha; dados e artefatos hoje presos em volumes locais (`./data`) passariam
 para **S3**, desacoplando-os do ciclo de vida dos containers.
 
-Como o fluxo de uma requisição já atravessa quatro serviços (dashboard →
+O fluxo de uma requisição já atravessa quatro serviços (dashboard →
 agent_service → mcp_server → api_service, ver
-[arquitetura do Admin Assistant](architecture/admin-assistant.md)) sem
-nenhuma stack de observabilidade central hoje — cada serviço loga
-isoladamente — a operação em nuvem exigiria **CloudWatch** para centralizar
+[arquitetura do Admin Assistant](architecture/admin-assistant.md)). Hoje
+`api_service` e `model_service` emitem log estruturado em JSON e traces via
+ddtrace, coletados por um agente Datadog opcional no compose
+(`--profile datadog`); `agent_service`, `mcp_server` e os frontends ainda
+logam isoladamente. Em nuvem, a operação exigiria **CloudWatch** para centralizar
 logs e métricas de todos os pods no EKS, **CloudWatch Container Insights**
 para visibilidade de cluster/pod, e tracing distribuído (**X-Ray** ou
 OpenTelemetry) para acompanhar uma requisição através dos quatro serviços e

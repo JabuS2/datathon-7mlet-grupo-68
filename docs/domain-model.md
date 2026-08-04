@@ -8,10 +8,15 @@ com assistente LLM + RAG, avaliação por golden set e governança (Datathon 7ML
 > Vetores de contexto, elegibilidade, reason codes e versões de catálogo são
 > **transientes ou enums** — calculados/serializados, não tabelas.
 
-> ⚠️ **Escopo do backend (atualização):** o **assistente LLM + RAG** será uma **API separada**.
-> As entidades `documento_politica` e `sessao_assistente` **não** fazem parte deste backend
-> (removidas do código e da migração). `canal` virou **enum** em `decisao` e `variante_mensagem`
-> foi descartada — a modelagem seguiu o `offer_catalog.json` real (LinUCB + reward composto).
+> ⚠️ **Escopo do backend (atualização):** o **assistente LLM** virou serviço separado
+> (`agent_service` + `mcp_server`), **sem RAG**. As entidades `documento_politica` e
+> `sessao_assistente` **não** fazem parte deste backend (removidas do código e da migração);
+> as seções que as descrevem abaixo ficaram como registro do desenho original.
+> `data/rag_corpus/` também foi removido — ver `data/README.md`.
+> `canal` virou **enum** em `decisao` e `variante_mensagem` foi descartada.
+>
+> A recompensa hoje é **binária** (clique/conversão), não composta, e as políticas são três
+> — `baseline`, `thompson`, `linucb` (o UCB foi removido).
 > O contrato vigente do backend está em `docs/backend-roadmap.md` e `docs/api-contracts.md`.
 
 ## Mapa de prioridade
@@ -29,7 +34,7 @@ com assistente LLM + RAG, avaliação por golden set e governança (Datathon 7ML
 `estado_braco`, `sessao_assistente`, `metrica_monitoramento`, `ciclo_retreino`,
 `aprovacao_humana`, `usuario`). Arquivo versionado para o que é dado de referência
 (`oferta`/`segmento`/`canal`/`variante_mensagem` → `offer_catalog.json`,
-`caso_avaliacao` → JSONL, `documento_politica` → `rag_corpus` + vector store).
+`caso_avaliacao` → JSONL). `documento_politica`/`sessao_assistente` não existem mais.
 
 **`cliente` é uma camada híbrida** (ver §6):
 - **Analítica (CSV, completa):** `data/synthetic_enrichment/clientes_br_sintetico.csv`
@@ -235,10 +240,12 @@ assistente LLM "resume".
 | `period` | {start, end} |
 | `status` | enum (running / done) |
 
-### `documento_politica`
-**O que é:** documentos de **política comercial e suitability** (sintéticos) indexados para o
-**RAG** — é o que o assistente LLM recupera para fundamentar explicações.
-Origem: `data/rag_corpus` + `src/data/vector_store`.
+### `documento_politica` — ❌ não implementada
+> Desenho original, mantido como registro. Nunca virou tabela: o assistente saiu deste
+> backend e ficou sem RAG. `data/rag_corpus/` também foi removido.
+
+**O que era:** documentos de **política comercial e suitability** (sintéticos) indexados para
+o **RAG** — o que o assistente LLM recuperaria para fundamentar explicações.
 
 | Campo | Tipo |
 |---|---|
@@ -248,9 +255,11 @@ Origem: `data/rag_corpus` + `src/data/vector_store`.
 | `type` | enum (suitability / política comercial) |
 | `embedding` | vector |
 
-### `sessao_assistente`
-**O que é:** a **trilha auditável** das conversas com o assistente LLM (resumir experimentos,
-explicar decisões). Necessária para testar o guardrail de "abuso do assistente" (Etapa 8).
+### `sessao_assistente` — ❌ não implementada
+> Desenho original, mantido como registro. O `agent_service` não persiste conversas hoje.
+
+**O que era:** a **trilha auditável** das conversas com o assistente LLM (resumir
+experimentos, explicar decisões), para testar o guardrail de "abuso do assistente" (Etapa 8).
 
 | Campo | Tipo |
 |---|---|
@@ -395,8 +404,6 @@ erDiagram
     politica ||--o{ metrica_monitoramento : "monitorada por"
     politica ||--o{ ciclo_retreino : "origina"
     experimento ||--o{ caso_avaliacao : "testa"
-    oferta  ||--o{ documento_politica : "referencia (RAG)"
-    usuario ||--o{ sessao_assistente : "conduz"
     usuario ||--o{ aprovacao_humana : "aprova"
     ciclo_retreino ||--o{ aprovacao_humana : "promovida por"
 ```

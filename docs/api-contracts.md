@@ -71,7 +71,7 @@ conjunto elegível devolve `409 ARM_NOT_ELIGIBLE`.
 **Erros:** `404` cliente inexistente; `409`/`422` sem braço elegível.
 
 ### `POST /showcase` — vitrine ranqueada
-Devolve as ofertas elegíveis **ordenadas** pelo score UCB (o que o front-end monta como vitrine).
+Devolve as ofertas elegíveis **ordenadas** pelo score da política ativa (LinUCB por default).
 
 **Request** (`ShowcaseRequest`): `{ "codCliente": 100870, "channel": "app", "topK": 5 }`
 
@@ -87,15 +87,21 @@ Devolve as ofertas elegíveis **ordenadas** pelo score UCB (o que o front-end mo
 }
 ```
 
-### `POST /feedback` — evento de clique/impressão
-Registra o evento observado após a decisão (o **clique** alimenta o termo `beta` do reward
-composto `0.6·receita/vmax + 0.4·clique`).
+### `POST /me/feedback` — evento de clique/impressão
+Registra o evento observado após a decisão. O clique é o **único** sinal de recompensa.
+
+> A rota crua `POST /feedback` foi cedida ao fluxo novo (`endpoints/feedback.py`, via
+> model_service), que espera `{ "armId": …, "clicked": … }`. Para o evento atrelado a uma
+> decisão auditável, use `/me/feedback`.
 
 **Request** (`FeedbackRequest`): `{ "decisionId": "b1f2…", "type": "click" }`
 **Response 200** (`FeedbackResponse`): `{ "eventId": "…", "decisionId": "b1f2…", "type": "click", "occurredAt": "…Z" }`
 
 ### `POST /reward` — resultado (adoção do produto)
 Realimenta o bandit; pode chegar **atrasado** (`status="pending"` até observar a transição 0→1).
+
+A recompensa é **binária** e derivada pelo serviço: `1.0` se houve clique ou conversão, `0.0`
+caso contrário. O chamador não arbitra o valor — `RewardRequest` não tem campo `value`.
 
 **Request** (`RewardRequest`): `{ "decisionId": "b1f2…", "converted": true }`
 **Response 200** (`RewardResponse`): `{ "rewardId": "…", "decisionId": "b1f2…", "value": 0.71, "status": "observed" }`
@@ -121,8 +127,11 @@ acompanhado por fairness de exposição).
 
 | Método | Rota | Response | Papel |
 |---|---|---|---|
-| `GET` | `/offers` | `OfertaPublica[]` | vitrine: 10 braços, sem parâmetros do bandit |
+| `GET` | `/offers` | `OfferResponse[]` | vitrine ranqueada pelo **model_service** (`?algorithm=&top=`) |
 | `GET` | `/offers/catalog` | `OfertaResponse[]` | catálogo interno (receita, elegibilidade) — **operador** |
+| `GET` | `/profile` | `ProfileResponse` | features/segmentos usados como contexto do bandit |
+| `PUT` | `/profile` | `ProfileResponse` | grava o contexto do usuário logado |
+| `POST` | `/feedback` | `FeedbackResponse` | clique por `armId` → reward 0/1 propagado ao model_service |
 | `GET` | `/segments` | `SegmentoResponse[]` | segmentos sintéticos |
 | `POST` | `/onboarding` | `OnboardingResponse` | cadastro demo (perfil template §6) |
 | `GET` | `/clients/{codCliente}` | `ClienteResponse` | contexto do cliente |
@@ -151,11 +160,16 @@ feedback/reward verificam a **posse** da decisão. É a jornada "loga → vê co
 | `POST` | `/me/feedback` | `FeedbackResponse` | clique — só na **própria** decisão (`403 NOT_DECISION_OWNER`) |
 | `POST` | `/me/reward` | `RewardResponse` | resultado — só na própria decisão |
 | `GET` | `/me/decisions` | `DecisaoResponse[]` | histórico das próprias decisões |
-| `GET` | `/offers` | `OfertaPublica[]` | vitrine das 10 ofertas (`armId`, nome, descrição, categoria) |
+| `GET` | `/offers` | `OfferResponse[]` | vitrine ranqueada pelo model_service |
 | `GET` | `/segments` | `SegmentoResponse[]` | segmentos sintéticos |
 
-> As rotas cruas `/decide`,`/showcase`,`/feedback`,`/reward` (sem `/me`) permanecem como
-> superfície **interna/ops** (ex.: `scripts/reproduce.py`, operadores). O usuário final usa `/me/*`.
+> As rotas cruas `/decide`, `/showcase` e `/reward` (sem `/me`) permanecem como superfície
+> **interna/ops** (ex.: `scripts/reproduce.py`, operadores). O usuário final usa `/me/*`.
+>
+> `POST /feedback` **não** pertence mais a essa superfície: o caminho passou para o fluxo novo
+> (`endpoints/feedback.py`, via model_service), que espera `{ "armId": "...", "clicked": true }`
+> e não `{ "decisionId": "...", "type": "click" }`. Para registrar o clique atrelado a uma
+> decisão auditável, use `POST /me/feedback`.
 
 ---
 

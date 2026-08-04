@@ -287,19 +287,21 @@ os scores mudam. É o efeito para mostrar ao vivo na demo.
 
 ## Passo 6 — Telas de apoio
 
-### Catálogo completo
+### Vitrine ranqueada
 
 ```http
-GET /api/v1/offers
+GET /api/v1/offers?algorithm=linucb&top=5
 ```
 ```json
-[ { "armId": "OFF-CR-001", "productName": "Crédito Pessoal Pré-Aprovado",
-    "description": "Dinheiro na conta em minutos...", "category": "credito" } ]
+[ { "armId": "OFF-CR-001", "rank": 1, "score": 0.8421, "category": "credito",
+    "productName": "Crédito Pessoal Pré-Aprovado",
+    "description": "Dinheiro na conta em minutos...",
+    "valorTotal": 12000.0, "descontoPct": 5.0, "valorFinal": 11400.0 } ]
 ```
 
-10 ofertas, **sem personalização** — é a vitrine estática. Só estes 4 campos: receita esperada e
-regras de elegibilidade são internas e ficam em `/offers/catalog`, restrita a operador (403 para
-o cliente).
+Ranqueada pelo `model_service` a partir do perfil do usuário (`GET/PUT /api/v1/profile`) e já
+filtrada por elegibilidade. Receita esperada, `contextFeatures` e as regras de `eligibleSegment`
+continuam internas, em `/offers/catalog`, restrita a operador (403 para o cliente).
 
 `GET /api/v1/segments` devolve os segmentos sintéticos, se precisar de rótulos.
 

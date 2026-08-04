@@ -73,7 +73,7 @@ async def my_feedback(body: FeedbackRequest, user: CurrentUser, uow: UnitOfWork 
 @router.post("/reward", response_model=RewardResponse)
 async def my_reward(body: RewardRequest, user: CurrentUser, uow: UnitOfWork = Depends(get_uow)):
     await AccountService(uow).ensure_owns_decision(user, body.decision_id)
-    return await DecisionService(uow).reward(body.decision_id, body.converted, body.value)
+    return await DecisionService(uow).reward(body.decision_id, body.converted)
 
 
 @router.get("/decisions", response_model=list[DecisaoResponse])

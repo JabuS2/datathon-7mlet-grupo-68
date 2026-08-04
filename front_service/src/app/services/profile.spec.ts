@@ -68,7 +68,7 @@ describe('Profile', () => {
       expect(response).toEqual(mockResponse);
     });
 
-    const request = httpMock.expectOne('http://localhost:8008/api/v1/me/profile');
+    const request = httpMock.expectOne('http://localhost:8001/api/v1/me/profile');
 
     expect(request.request.method).toBe('GET');
     request.flush(mockResponse);

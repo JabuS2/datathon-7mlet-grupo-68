@@ -26,13 +26,21 @@ nav:
   - Home: index.md
   - Arquitetura:
       - Admin Assistant: architecture/admin-assistant.md
+      - Modelo de domínio: domain-model.md
+      - Roadmap do backend: backend-roadmap.md
   - Serviços:
       - api_service: services/api-service.md
+      - model_service: services/model-service.md
       - front_service: services/front-service.md
       - agent_service: services/agent-service.md
       - mcp_server: services/mcp-server.md
       - dashboard: services/dashboard.md
-  - Infraestrutura: infra.md
+  - API:
+      - Contratos: api-contracts.md
+      - Integração com o front: front-integration.md
+  - Operação:
+      - Infraestrutura: infra.md
+      - Observabilidade: observability-datadog.md
 
 markdown_extensions:
   - admonition

@@ -1,47 +1,27 @@
+/**
+ * Contrato de `GET /api/v1/offers` — a vitrine ranqueada pelo model_service.
+ *
+ * Espelha o `OfferResponse` do api_service. Receita esperada, features de contexto e regras de
+ * elegibilidade NÃO vêm mais aqui: são parâmetros internos do bandit, restritos a operador em
+ * `/offers/catalog`.
+ */
 export interface RecommendationItem {
   armId: string;
+  /** Posição no ranking do bandit (1 = melhor oferta para este cliente). */
+  rank: number;
+  /** Score da política — quanto maior, mais o modelo aposta nesta oferta. */
+  score: number;
   productName: string;
   description: string;
   category: ProductCategory;
 
-  expectedRevenueBrl: number;
-
-  contextFeatures: string[];
-
-  eligibleSegment: EligibleSegment;
-
-  ucbExplorationFactor: number;
-}
-
-export interface EligibleSegment {
-  santander_filters: SantanderFilters;
-}
-
-export interface SantanderFilters {
-  idade_min?: number;
-  idade_max?: number;
-
-  renda_percentil_min?: number;
-
-  ind_ativo?: number;
-
-  tempo_relacionamento_meses_min?: number;
-
-  possui_conta_corrente?: number;
-  possui_cartao_credito?: number;
-
-  possui_emprestimo_pessoal_atual?: number;
-  possui_cartao_credito_atual?: number;
-
-  possui_conta_investimento?: number;
-  possui_fundo_investimento?: number;
-
-  possui_cdb_curto_prazo_atual?: number;
-  possui_cdb_medio_prazo_atual?: number;
-
-  possui_previdencia_privada_atual?: number;
-
-  possui_financiamento_imovel_atual?: number;
+  /**
+   * Valores comerciais da oferta. Opcionais: a API serializa com
+   * `response_model_exclude_none`, então campos sem valor vêm ausentes, não nulos.
+   */
+  valorTotal?: number;
+  descontoPct?: number;
+  valorFinal?: number;
 }
 
 export enum ProductCategory {

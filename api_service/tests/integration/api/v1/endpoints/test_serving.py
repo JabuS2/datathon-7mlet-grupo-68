@@ -1,4 +1,7 @@
-"""E7 — endpoints de serving: /decide, /showcase, /feedback, /reward + log auditável.
+"""E7 — endpoints de serving: /decide, /showcase, /reward + log auditável.
+
+`POST /feedback` foi descontinuado aqui (o caminho agora é do fluxo novo via model_service);
+o registro de `EventoImpressao(click)` segue coberto por `/me/feedback` em test_account.py.
 
 Usa o harness de integração (conftest): Postgres migrado + `client` httpx. Semeia catálogo,
 políticas e um subset de clientes antes de exercitar o fluxo ponta a ponta.
@@ -42,15 +45,11 @@ async def test_decide_persists_auditable_decision(client, cod_cliente, session_f
 
 
 @pytest.mark.asyncio
-async def test_full_loop_decide_feedback_reward(client, cod_cliente, session_factory):
+async def test_full_loop_decide_reward(client, cod_cliente, session_factory):
     decided = (
         await client.post("/decide", json={"codCliente": cod_cliente, "channel": "app"})
     ).json()
     did = decided["decisionId"]
-
-    fb = await client.post("/feedback", json={"decisionId": did, "type": "click"})
-    assert fb.status_code == 200
-    assert fb.json()["type"] == "click"
 
     rw = await client.post("/reward", json={"decisionId": did, "converted": True})
     assert rw.status_code == 200
@@ -72,39 +71,24 @@ async def test_showcase_returns_ranked_offers(client, cod_cliente):
 
 
 @pytest.mark.asyncio
-async def test_reward_uses_reward_definition_of_the_policy(client, cod_cliente, session_factory):
-    """A recompensa segue a definição da POLÍTICA que gerou a decisão, não só a do catálogo.
-
-    Registra uma política que ignora receita e só pontua clique (alpha=0, beta=1), promove,
-    decide e premia: o valor tem de ser exatamente 1.0. Antes, o cálculo lia sempre o
-    `reward_definition` do offer_catalog.json e o que ficava salvo em `hyperparams` era
-    decorativo — o log dizia uma coisa e o modelo aprendia outra.
-    """
-    await client.post("/register", json={"email": "rw@x.com", "password": "segredo123"})
-    tok = (
-        await client.post("/login", json={"email": "rw@x.com", "password": "segredo123"})
-    ).json()["accessToken"]
-    h = {"Authorization": f"Bearer {tok}"}
-
-    await client.post(
-        "/policies",
-        json={
-            "policyId": "so-clique-v1",
-            "version": "1.0",
-            "algorithm": "linucb",
-            "hyperparams": {"reward_definition": {"alpha": 0.0, "beta": 1.0, "v_max": 7000}},
-        },
-        headers=h,
-    )
-    await client.post("/policies/so-clique-v1/promote", headers=h)
-
+async def test_reward_is_binary(client, cod_cliente):
+    """Recompensa é 1.0 com clique/conversão e 0.0 sem — não depende mais da receita do braço."""
     did = (
         await client.post("/decide", json={"codCliente": cod_cliente, "channel": "app"})
     ).json()["decisionId"]
+
     valor = (await client.post("/reward", json={"decisionId": did, "converted": True})).json()[
         "value"
     ]
-    assert valor == pytest.approx(1.0)  # só o termo de clique; receita zerada pela política
+    assert valor == pytest.approx(1.0)
+
+    outra = (
+        await client.post("/decide", json={"codCliente": cod_cliente, "channel": "app"})
+    ).json()["decisionId"]
+    sem_clique = (
+        await client.post("/reward", json={"decisionId": outra, "converted": False})
+    ).json()["value"]
+    assert sem_clique == pytest.approx(0.0)
 
 
 @pytest.mark.asyncio

@@ -2,10 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { IRegisterRequest, IRegisterResponse } from '../interfaces/iregister';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from '../core/api';
 
 @Service()
 export class Register {
-    private readonly _registerUrl = 'http://localhost:8001/api/v1/register';
+    private readonly _registerUrl = `${API_BASE_URL}/register`;
     private http = inject(HttpClient);
 
     register(credentials: IRegisterRequest): Observable<IRegisterResponse> {

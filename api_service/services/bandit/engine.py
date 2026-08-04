@@ -17,7 +17,6 @@ import numpy as np
 from services.bandit.context import ReferenceStats
 from services.bandit.eligibility import eligible_arm_ids
 from services.bandit.policies import Policy
-from services.bandit.reward import composite_reward
 from services.bandit.state import ArmState, RankedArm
 
 # Atributos PROTEGIDOS: nunca entram na decisão, em nenhuma forma (auditoria LGPD).
@@ -49,16 +48,10 @@ class Decision:
 
 
 class BanditEngine:
-    def __init__(
-        self,
-        offers: Sequence[Mapping[str, Any]],
-        stats: ReferenceStats,
-        reward_definition: Mapping[str, Any] | None = None,
-    ):
+    def __init__(self, offers: Sequence[Mapping[str, Any]], stats: ReferenceStats):
         self.offers_list = list(offers)
         self.offers = {o["arm_id"]: o for o in offers}
         self.stats = stats
-        self.reward_definition = dict(reward_definition or {})
 
     # ── serving ──────────────────────────────────────────────────
     def rank(
@@ -109,31 +102,21 @@ class BanditEngine:
         )
 
     # ── aprendizado ──────────────────────────────────────────────
-    def reward_value(
-        self,
-        arm_id: str,
-        click: float | int | bool,
-        reward_definition: Mapping[str, Any] | None = None,
-    ) -> float:
-        """Recompensa composta (receita+clique) do braço, para realimentar a política.
+    @staticmethod
+    def reward_value(click: float | int | bool) -> float:
+        """Recompensa binária: 1.0 quando houve clique/conversão, 0.0 caso contrário.
 
-        `reward_definition` da **política ativa** tem precedência sobre a do catálogo: é o que
-        permite versionar formas de recompensa (ex.: uma política que pesa mais o clique que a
-        receita) e garante que o valor gravado corresponda à definição que a política declara.
-        Sem ela, cai no default do `offer_catalog.json`.
+        Antes era composta (`alpha·receita_normalizada + beta·clique`, parametrizada por
+        `reward_definition`). O sinal passou a ser só o clique — é o que o usuário observa e o
+        que o model_service consome em `POST /update`.
         """
-        offer = self.offers.get(arm_id, {})
-        return composite_reward(
-            offer.get("expected_revenue_brl", 0.0),
-            click,
-            reward_definition or self.reward_definition,
-        )
+        return 1.0 if click else 0.0
 
     def update(
         self, client: Mapping[str, Any], policy: Policy, state: ArmState, click: float | int | bool
     ) -> float:
         """Aplica a recompensa observada ao estado do braço. Devolve o valor da recompensa."""
-        reward = self.reward_value(state.arm_id, click)
+        reward = self.reward_value(click)
         x = self.stats.context_vector(client)
         policy.update(self._decorate(state), reward, x)
         return reward

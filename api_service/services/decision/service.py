@@ -3,8 +3,8 @@
 Fluxo por endpoint:
   /decide   → escolhe braço, persiste `Decisao` + `EventoImpressao(impression)`.
   /showcase → ranqueia a vitrine (somente leitura, sem persistir).
-  /feedback → registra `EventoImpressao(click)`.
-  /reward   → aplica a recompensa composta ao `EstadoBraco` (aprendizado) e grava `Recompensa`.
+  /me/feedback → registra `EventoImpressao(click)`.
+  /reward   → aplica a recompensa **binária** ao `EstadoBraco` (aprendizado) e grava `Recompensa`.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from services.decision.runtime import get_runtime
 
 
 def _finite(value: float) -> float:
-    """Evita inf/nan no JSON (ex.: score de cold-start do UCB)."""
+    """Guarda contra inf/nan no JSON vindo de um score degenerado."""
     return value if math.isfinite(value) else 1e9
 
 
@@ -157,9 +157,7 @@ class DecisionService:
             )
 
     # ── /reward ──────────────────────────────────────────────────
-    async def reward(
-        self, decision_id: UUID, converted: bool, value: float | None
-    ) -> RewardResponse:
+    async def reward(self, decision_id: UUID, converted: bool) -> RewardResponse:
         async with self.uow:
             decision = await self._require_decision(decision_id)
             policy = await self.uow.politicas.get_by_policy_id(decision.policy_version)
@@ -169,17 +167,7 @@ class DecisionService:
             # click = houve evento de clique OU o cliente converteu
             events = await self.uow.eventos_impressao.list_by_decision(decision_id)
             clicked = any(e.type == TipoEvento.CLICK for e in events) or converted
-            # A definição de recompensa é da POLÍTICA que gerou a decisão (não da política ativa
-            # nem só do catálogo): recompensa atrasada pode chegar depois de uma promoção, e o
-            # valor tem de refletir a regra sob a qual a decisão foi tomada.
-            reward_definition = (policy.hyperparams or {}).get("reward_definition")
-            reward_value = (
-                float(value)
-                if value is not None
-                else self.rt.engine.reward_value(
-                    decision.chosen_arm_id, clicked, reward_definition
-                )
-            )
+            reward_value = self.rt.engine.reward_value(clicked)
 
             # aprendizado: atualiza o estado do braço (LinUCB A/b, Thompson α/β, UCB n/sum)
             orm_state = await self.uow.estados_braco.get(policy.policy_id, decision.chosen_arm_id)

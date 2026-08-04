@@ -12,15 +12,14 @@ describe('InvestmentOpportunitiesComponent', () => {
 
   const opportunity = {
     armId: 'ARM-001',
+    rank: 1,
+    score: 0.8421,
     productName: 'CDB Conservador',
     description: 'Baixo risco para início de carteira.',
     category: ProductCategory.Investimento,
-    expectedRevenueBrl: 150.4,
-    contextFeatures: ['perfil', 'risco'],
-    eligibleSegment: {
-      santander_filters: {},
-    },
-    ucbExplorationFactor: 0.1,
+    valorTotal: 1000,
+    descontoPct: 5,
+    valorFinal: 950,
   };
 
   const investimentMock = {

@@ -6,7 +6,6 @@ class AlgoritmoPolitica(StrEnum):
 
     BASELINE = "baseline"
     THOMPSON = "thompson"
-    UCB = "ucb"
     LINUCB = "linucb"
 
 

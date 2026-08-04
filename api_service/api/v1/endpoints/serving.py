@@ -1,6 +1,10 @@
 """Endpoints de serving do bandit (Etapa 5): decisão controlada e auditável.
 
 Contratos documentados em `docs/api-contracts.md`. RBAC por papel entra em E8.
+
+`POST /feedback` saiu daqui: o caminho passou a ser servido por `endpoints/feedback.py`
+(fluxo novo, via model_service). O registro de `EventoImpressao(click)` atrelado a uma
+decisão continua disponível em `POST /me/feedback` (`endpoints/account.py`).
 """
 
 from fastapi import APIRouter, Depends
@@ -10,8 +14,6 @@ from db.unit_of_work import UnitOfWork
 from schemas.decisao import (
     DecideRequest,
     DecideResponse,
-    FeedbackRequest,
-    FeedbackResponse,
     RewardRequest,
     RewardResponse,
     ShowcaseRequest,
@@ -32,11 +34,6 @@ async def showcase(body: ShowcaseRequest, uow: UnitOfWork = Depends(get_uow)):
     return await DecisionService(uow).showcase(body.cod_cliente, body.channel, body.top_k)
 
 
-@router.post("/feedback", response_model=FeedbackResponse)
-async def feedback(body: FeedbackRequest, uow: UnitOfWork = Depends(get_uow)):
-    return await DecisionService(uow).feedback(body.decision_id, body.type)
-
-
 @router.post("/reward", response_model=RewardResponse)
 async def reward(body: RewardRequest, uow: UnitOfWork = Depends(get_uow)):
-    return await DecisionService(uow).reward(body.decision_id, body.converted, body.value)
+    return await DecisionService(uow).reward(body.decision_id, body.converted)

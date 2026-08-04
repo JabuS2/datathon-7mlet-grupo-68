@@ -21,6 +21,13 @@
             <span class="text-[10px] text-gray-400 font-mono">
               {{ opportunity.armId }}
             </span>
+
+            <span
+              class="ml-auto rounded bg-emerald-400/20 px-2 py-1 text-[10px] font-semibold text-emerald-300"
+              [title]="'Score do modelo: ' + (opportunity.score | number: '1.4-4')"
+            >
+              #{{ opportunity.rank }} · {{ opportunity.score | number: '1.2-2' }}
+            </span>
           </div>
 
           <h3 class="text-lg font-semibold mb-2">
@@ -31,12 +38,29 @@
             {{ opportunity.description }}
           </p>
 
-          <div class="text-xs text-gray-400">
-            Receita esperada:
-            <strong class="text-white">
-              R$ {{ opportunity.expectedRevenueBrl | number: '1.0-0' }}
-            </strong>
-          </div>
+          @if (opportunity.valorFinal !== undefined) {
+            <div class="rounded-lg bg-white/5 p-3">
+              <div class="flex items-baseline gap-2">
+                @if (opportunity.valorTotal !== undefined) {
+                  <span class="text-xs text-gray-400 line-through">
+                    R$ {{ opportunity.valorTotal | number: '1.2-2' }}
+                  </span>
+                }
+
+                <strong class="text-lg text-white">
+                  R$ {{ opportunity.valorFinal | number: '1.2-2' }}
+                </strong>
+              </div>
+
+              @if (opportunity.descontoPct) {
+                <span
+                  class="mt-1 inline-block rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300"
+                >
+                  {{ opportunity.descontoPct | number: '1.0-2' }}% de desconto
+                </span>
+              }
+            </div>
+          }
         </div>
 
         <button

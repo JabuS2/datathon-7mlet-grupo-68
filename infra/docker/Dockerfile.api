@@ -25,5 +25,7 @@ USER appuser
 
 EXPOSE 8000
 
-# O entrypoint espera o Postgres, migra, semeia (SEED_DB) e sobe o uvicorn sem --reload.
+# O entrypoint espera o Postgres, migra, semeia (SEED_DB) e sobe o uvicorn sob
+# ddtrace-run (instrumentação Datadog) sem --reload. Sem DD_TRACE_ENABLED=true
+# (default do compose é false) o ddtrace não tenta conectar ao agent.
 ENTRYPOINT ["/app/entrypoint.sh"]
