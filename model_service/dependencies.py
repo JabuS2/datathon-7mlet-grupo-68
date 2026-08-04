@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from functools import lru_cache
 
@@ -29,9 +30,16 @@ async def get_uow() -> AsyncIterator[UnitOfWork]:
         yield UnitOfWork(session)
 
 
+async def _snapshot_to_registry(policy) -> str | None:
+    """Versiona o estado da política no MLflow e devolve a versão registrada."""
+    state = await get_service().snapshot_state(policy.algorithm, policy=policy)
+    info = await asyncio.to_thread(get_registry().register_version, policy.policy_id, state)
+    return str(info.get("version")) if isinstance(info, dict) else None
+
+
 async def get_governance() -> AsyncIterator[GovernanceService]:
     async for session in db.session():
-        yield GovernanceService(UnitOfWork(session))
+        yield GovernanceService(UnitOfWork(session), snapshot=_snapshot_to_registry)
 
 
 @lru_cache

@@ -16,6 +16,7 @@ guardamos o valor publicado, para exibir ao lado da política que ele justificou
 
 from __future__ import annotations
 
+import logging
 from uuid import uuid4
 
 from db.models import AprovacaoHumana, CicloRetreino, MetricaSnapshot, Politica
@@ -34,6 +35,8 @@ from schemas.governance import (
 )
 from service.policy_resolver import ResolvedPolicy
 
+logger = logging.getLogger(__name__)
+
 
 class Conflict(AppException):
     def __init__(self, message: str, code: str | None = None):
@@ -41,8 +44,15 @@ class Conflict(AppException):
 
 
 class GovernanceService:
-    def __init__(self, uow: UnitOfWork):
+    def __init__(self, uow: UnitOfWork, snapshot=None):
+        """`snapshot(policy) -> versão | None`: registra o estado da política no MLflow.
+
+        Injetado em vez de importado para que abrir um ciclo continue funcionando (sem
+        `registry_version`) quando o MLflow está fora — o gate humano não pode depender da
+        disponibilidade do registry.
+        """
         self.uow = uow
+        self.snapshot = snapshot
 
     # ── políticas ────────────────────────────────────────────────
     async def register_policy(self, data: PoliticaCreate) -> PoliticaResponse:
@@ -84,16 +94,31 @@ class GovernanceService:
 
     # ── ciclo de retreino + approval gate ────────────────────────
     async def start_cycle(self, data: RetrainCycleCreate) -> CicloRetreinoResponse:
+        """Abre um ciclo e **registra o snapshot do modelo no MLflow**.
+
+        Antes o ciclo era só uma linha no banco: nada ligava a candidata ao artefato que ela
+        representava, então aprovar era aprovar um `run_id` sem modelo anexo. Agora o estado
+        da política é versionado no registry e o `registry_version` fica no ciclo — é o que
+        permite recarregar exatamente aquele modelo num rollback.
+        """
         async with self.uow:
-            await self._require_policy(data.policy_id)
+            policy = await self._require_policy(data.policy_id)
             run_id = data.run_id or f"run-{uuid4().hex[:8]}"
             if await self.uow.get_cycle(run_id):
                 raise Conflict("run_id já existe", code="RUN_EXISTS")
+            resolved = ResolvedPolicy(
+                policy_id=policy.policy_id,
+                algorithm=str(policy.algorithm),
+                hyperparams=dict(policy.hyperparams or {}),
+                governed=True,
+            )
+            registry_version = await self._snapshot(resolved)
             cycle = CicloRetreino(
                 run_id=run_id,
                 policy_id=data.policy_id,
                 status=StatusCicloRetreino.CANDIDATE,
                 metrics=data.metrics,
+                registry_version=registry_version,
             )
             self.uow.add(cycle)
             await self.uow.session.flush()
@@ -153,6 +178,18 @@ class GovernanceService:
             return [MetricaResponse.model_validate(r) for r in rows]
 
     # ── helpers ──────────────────────────────────────────────────
+    async def _snapshot(self, policy: ResolvedPolicy) -> str | None:
+        """Versiona o estado da política. Falha do registry **não** aborta o ciclo."""
+        if self.snapshot is None:
+            return None
+        try:
+            return await self.snapshot(policy)
+        except Exception:
+            logger.exception(
+                "registry_snapshot_failed", extra={"policy_id": policy.policy_id}
+            )
+            return None
+
     async def _activate(self, policy: Politica) -> None:
         """Torna `policy` a única ativa; aposenta as demais.
 

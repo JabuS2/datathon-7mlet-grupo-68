@@ -39,6 +39,11 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    # `decisoes` sobrevive e referenciava `politicas`; sem soltar a FK primeiro, o
+    # DROP TABLE falha. `policy_version` vira referência solta para a política que agora
+    # vive no banco do model_service.
+    op.drop_constraint("fk_decisoes_policy_version_politicas", "decisoes", type_="foreignkey")
+
     # ordem: dependentes primeiro (FKs)
     op.drop_table("aprovacoes_humanas")
     op.drop_table("metricas_monitoramento")
@@ -175,4 +180,12 @@ def downgrade() -> None:
             ["user_id"], ["users.id"], name=op.f("fk_aprovacoes_humanas_user_id_users")
         ),
         sa.PrimaryKeyConstraint("gate_id", name=op.f("pk_aprovacoes_humanas")),
+    )
+    op.create_foreign_key(
+        "fk_decisoes_policy_version_politicas",
+        "decisoes",
+        "politicas",
+        ["policy_version"],
+        ["policy_id"],
+        ondelete="RESTRICT",
     )

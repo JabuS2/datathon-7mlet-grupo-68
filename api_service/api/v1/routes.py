@@ -8,6 +8,7 @@ from .endpoints import (
     demo,
     feedback,
     health,
+    monitoring,
     offers,
     serving,
 )
@@ -22,3 +23,4 @@ router.include_router(serving.router)
 router.include_router(demo.router)
 router.include_router(account.router)
 router.include_router(catalog.router)
+router.include_router(monitoring.router)

@@ -22,9 +22,10 @@ class Decisao(Base):
     cod_cliente: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("clientes.cod_cliente", ondelete="SET NULL"), nullable=True
     )
-    policy_version: Mapped[str] = mapped_column(
-        String(60), ForeignKey("politicas.policy_id", ondelete="RESTRICT"), nullable=False
-    )
+    # Referência SOLTA para a política: `politicas` migrou para o model_service (banco
+    # próprio), então não há FK possível. O valor vem do `policy_id` que o /rank devolveu —
+    # é o que amarra a decisão à versão do modelo que a produziu.
+    policy_version: Mapped[str] = mapped_column(String(60), nullable=False)
     chosen_arm_id: Mapped[str] = mapped_column(
         String(20), ForeignKey("ofertas.arm_id", ondelete="RESTRICT"), nullable=False
     )

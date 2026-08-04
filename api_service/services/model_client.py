@@ -91,3 +91,21 @@ class ModelServiceClient:
                 "segments": segments,
             },
         )
+
+    async def publish_metric(
+        self, policy_id: str, metric: str, value: float, alert: bool = False
+    ) -> dict[str, Any]:
+        """Publica uma métrica já calculada aqui (é este serviço que tem decisao/recompensa)."""
+        return await self._post(
+            "/api/v1/metrics",
+            {"policy_id": policy_id, "metric": metric, "value": value, "alert": alert},
+        )
+
+    async def start_retrain_cycle(
+        self, policy_id: str, metrics: dict[str, Any], run_id: str | None = None
+    ) -> dict[str, Any]:
+        """Abre um ciclo de retreino; o model_service registra o snapshot no MLflow."""
+        return await self._post(
+            "/api/v1/retrain-cycles",
+            {"policy_id": policy_id, "run_id": run_id, "metrics": metrics},
+        )
