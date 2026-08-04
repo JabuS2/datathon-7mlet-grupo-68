@@ -45,11 +45,18 @@ class ModelServiceClient:
         segments: list[str],
         top: int | None = None,
         exclude_arm_ids: list[str] | None = None,
+        policy_id: str | None = None,
     ) -> dict[str, Any]:
+        """Ranqueia as ofertas elegíveis.
+
+        `policy_id` omitido: o model_service usa a política `active`. A resposta traz o
+        `policy_id` efetivo, que é o que carimbamos em `Decisao.policy_version`.
+        """
         return await self._post(
             "/api/v1/rank",
             {
                 "algorithm": algorithm,
+                "policy_id": policy_id,
                 "client": client,
                 "segments": segments,
                 "top": top,
@@ -64,11 +71,20 @@ class ModelServiceClient:
         reward: float,
         client: dict[str, Any],
         segments: list[str],
+        policy_id: str | None = None,
     ) -> dict[str, Any]:
+        """Aplica a recompensa observada.
+
+        Recompensa atrasada precisa passar `policy_id` **explícito**, o da decisão que a
+        gerou: sem ele o model_service aplicaria na política ativa no momento, que pode não
+        ser a mesma que decidiu — o aprendizado iria para o modelo errado depois de uma
+        promoção.
+        """
         return await self._post(
             "/api/v1/update",
             {
                 "algorithm": algorithm,
+                "policy_id": policy_id,
                 "arm_id": arm_id,
                 "reward": reward,
                 "client": client,

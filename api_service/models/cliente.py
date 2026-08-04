@@ -69,15 +69,22 @@ class Cliente(Base):
         OrigemCliente, nullable=False, default=OrigemCliente.SEED
     )
 
+    #: Nunca entram na decisão, em nenhuma forma (LGPD). O model_service declara a exclusão
+    #: no bloco auditável; aqui garantimos que o valor não chega a sair do serviço.
+    PROTECTED_ATTRIBUTES: tuple[str, ...] = ("sexo",)
+
     def to_context(self) -> dict:
         """Projeção do cliente como dicionário de contexto para o bandit.
 
-        Devolve todas as colunas. A seleção do que vira feature é de quem consome:
-        `ReferenceStats.context_vector` (in-process) e o `ContextBuilder` (model_service)
-        usam só as `context_features` declaradas no catálogo, e `sexo` fica de fora das duas
-        — o `_audit_context` do engine o declara em `atributos_excluidos`.
+        Sai daqui pela rede até o model_service, então os atributos protegidos são removidos
+        **na origem** — minimização de dado, não confiança no consumidor. O model_service
+        descarta de novo na entrada, e declara a exclusão em `audit.atributos_excluidos`.
         """
-        return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+        return {
+            col.name: getattr(self, col.name)
+            for col in self.__table__.columns
+            if col.name not in self.PROTECTED_ATTRIBUTES
+        }
 
     # --- 24 flags de posse de produto (base da recompensa) ---
     possui_poupanca: Mapped[bool] = _flag()

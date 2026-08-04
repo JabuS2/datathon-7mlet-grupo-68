@@ -64,7 +64,7 @@ conjunto elegível devolve `409 ARM_NOT_ELIGIBLE`.
   "category": "credito",
   "channel": "app",
   "score": 1.2734,
-  "reasonCodes": ["elegivel:ind_ativo", "linucb_ucb_top", "cold_start"],
+  "reasonCodes": ["policy:linucb", "cold_start", "eligible:7"],
   "policyVersion": "linucb-v1"
 }
 ```
@@ -82,7 +82,7 @@ Devolve as ofertas elegíveis **ordenadas** pelo score da política ativa (LinUC
   "policyVersion": "linucb-v1",
   "items": [
     { "armId": "OFF-INV-004", "productName": "Fundo Multimercado", "description": "…",
-      "category": "investimento", "score": 1.51, "reasonCodes": ["explora_incerteza"], "rank": 1 }
+      "category": "investimento", "score": 1.51, "reasonCodes": ["policy:linucb", "explore"], "rank": 1 }
   ]
 }
 ```
@@ -104,13 +104,12 @@ A recompensa é **binária** e derivada pelo serviço: `1.0` se houve clique ou 
 caso contrário. O chamador não arbitra o valor — `RewardRequest` não tem campo `value`.
 
 **Request** (`RewardRequest`): `{ "decisionId": "b1f2…", "converted": true }`
-**Response 200** (`RewardResponse`): `{ "rewardId": "…", "decisionId": "b1f2…", "value": 0.71, "status": "observed" }`
+**Response 200** (`RewardResponse`): `{ "rewardId": "…", "decisionId": "b1f2…", "value": 1.0, "status": "observed" }`
 
-O `value` é calculado pelo `reward_definition` da **política que gerou a decisão** (de
-`politica.hyperparams`), com fallback para o do `offer_catalog.json`. Não é o da política ativa
-no momento do reward: recompensa atrasada pode chegar depois de uma promoção, e o valor precisa
-refletir a regra vigente quando a decisão foi tomada. Enviar `value` no request sobrescreve o
-cálculo — use só para replay/backfill.
+O aprendizado é aplicado na **política que gerou a decisão** (`decisao.policy_version`), não na
+ativa no momento do reward: recompensa atrasada pode chegar depois de uma promoção, e aplicá-la
+na política errada corromperia o modelo que está servindo. O api_service repassa esse
+`policy_id` explicitamente no `POST /update` do model_service.
 
 ### `GET /decisions/{decisionId}` — visão auditável
 **Response 200** (`DecisaoResponse`): decisão completa com `context`, `reasonCodes`,
@@ -172,7 +171,18 @@ feedback/reward verificam a **posse** da decisão. É a jornada "loga → vê co
 
 ---
 
-## Governança & MLOps (somente `operador`)
+## Governança & MLOps
+
+> **Mudou de serviço.** O ciclo de vida das políticas (registrar, promover, ciclos de
+> retreino, approval gate) é do **model_service** — ver
+> [`services/model-service.md`](services/model-service.md). O api_service não expõe mais
+> `/policies`, `/retrain-cycles`, `/approvals` nem `/metrics`.
+>
+> O **cálculo** das métricas continua sendo do api_service, que é quem tem
+> `decisao`/`recompensa`; o resultado é publicado em `POST /metrics` do model_service.
+> O cálculo em si ainda não existe (Fase 5).
+
+### Contratos originais (referência histórica)
 
 | Método | Rota | Body / Response | Descrição |
 |---|---|---|---|

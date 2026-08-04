@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import os
 from collections.abc import AsyncGenerator, Iterator
 from contextlib import contextmanager
@@ -244,3 +245,20 @@ async def expired_token() -> str:
         jwt_token.settings.SECRET_KEY,
         algorithm=jwt_token.settings.ALGORITHM,
     )
+
+
+@pytest.fixture
+def mock_model_service(monkeypatch):
+    """Substitui o cliente do model_service em TODOS os endpoints que o usam.
+
+    O bandit não roda mais em processo — `/decide`, `/showcase`, `/me/*`, `/offers` e
+    `/feedback` dependem do `/rank`/`/update` por HTTP. Cada endpoint tem uma instância de
+    módulo (`model_client`), então o patch é por módulo.
+    """
+    from tests.integration.fake_model import FakeModelClient
+
+    fake = FakeModelClient()
+    for mod in ("account", "feedback", "offers", "serving"):
+        module = importlib.import_module(f"api.v1.endpoints.{mod}")
+        monkeypatch.setattr(module, "model_client", fake, raising=True)
+    return fake

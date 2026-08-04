@@ -1,8 +1,11 @@
 """Seed idempotente do Postgres a partir dos dados de referência (catálogo + golden set).
 
-Popula: ofertas (10 braços), segmentos sintéticos, políticas (baseline/thompson/linucb) com
-os priors de `estado_braco` por braço, o subset de clientes (`origem='seed'`) e — se existir —
-os casos do golden set. Reexecutar não duplica: cada bloco só insere o que ainda falta.
+Popula: ofertas (10 braços), segmentos sintéticos, o subset de clientes (`origem='seed'`)
+e — se existir — os casos do golden set. Reexecutar não duplica: cada bloco só insere o que
+ainda falta.
+
+Políticas **não** são semeadas aqui: `politicas`/`estados_braco` migraram para o
+model_service. Use `scripts/seed_policies.py`, que as registra via HTTP.
 """
 
 from __future__ import annotations
@@ -10,12 +13,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from db.unit_of_work import UnitOfWork
-from enums.politica import AlgoritmoPolitica, StatusPolitica
 from models.caso_avaliacao import CasoAvaliacao
 from models.cliente import Cliente
-from models.estado_braco import EstadoBraco
 from models.oferta import Oferta
-from models.politica import Politica
 from models.segmento import Segmento
 from services.catalog.loaders import (
     iter_seed_clients,
@@ -23,19 +23,6 @@ from services.catalog.loaders import (
     load_offer_catalog,
     load_segments_from_clients,
 )
-
-# Políticas semeadas: LinUCB é a ativa (catálogo prod); as demais nascem em shadow para a
-# comparação da Etapa 3 (baseline vs Thompson vs contextual).
-SEED_POLICIES: list[tuple[str, AlgoritmoPolitica, StatusPolitica, dict]] = [
-    (
-        "baseline-v1",
-        AlgoritmoPolitica.BASELINE,
-        StatusPolitica.SHADOW,
-        {"rule": "best_expected_revenue"},
-    ),
-    ("thompson-v1", AlgoritmoPolitica.THOMPSON, StatusPolitica.SHADOW, {}),
-    ("linucb-v1", AlgoritmoPolitica.LINUCB, StatusPolitica.ACTIVE, {"alpha_scale": 0.2}),
-]
 
 
 def _golden_dir(data_dir: str | Path) -> Path:
@@ -52,21 +39,16 @@ async def seed_all(
     golden = _golden_dir(data_dir)
     offers = load_offer_catalog(golden / "offer_catalog.json")
 
-    counts = {
+    return {
         "ofertas": await _seed_offers(uow, offers),
         "segmentos": await _seed_segments(
             uow, load_segments_from_clients(golden / "golden_clients.csv")
         ),
-        "politicas": 0,
-        "estados_braco": 0,
         "clientes": await _seed_clients(uow, golden / "golden_clients.csv", client_limit),
         "casos_avaliacao": await _seed_cases(
             uow, load_evaluation_cases(golden / "evaluation_cases.jsonl")
         ),
     }
-    arm_ids = [o["arm_id"] for o in offers]
-    counts["politicas"], counts["estados_braco"] = await _seed_policies(uow, arm_ids)
-    return counts
 
 
 async def _seed_offers(uow: UnitOfWork, offers: list[dict]) -> int:
@@ -87,27 +69,6 @@ async def _seed_segments(uow: UnitOfWork, segments: list[dict]) -> int:
     return inserted
 
 
-async def _seed_policies(uow: UnitOfWork, arm_ids: list[str]) -> tuple[int, int]:
-    pol_inserted = 0
-    arm_inserted = 0
-    for policy_id, algorithm, status, hyper in SEED_POLICIES:
-        if await uow.politicas.get_by_policy_id(policy_id) is None:
-            uow.politicas.add(
-                Politica(
-                    policy_id=policy_id,
-                    version="1.0.0",
-                    algorithm=algorithm,
-                    hyperparams=dict(hyper),
-                    status=status,
-                )
-            )
-            pol_inserted += 1
-        # Priors por braço (cold-start): Thompson α=β=1; LinUCB A/b nulos.
-        for arm_id in arm_ids:
-            if await uow.estados_braco.get(policy_id, arm_id) is None:
-                uow.estados_braco.add(EstadoBraco(policy_id=policy_id, arm_id=arm_id))
-                arm_inserted += 1
-    return pol_inserted, arm_inserted
 
 
 async def _seed_clients(uow: UnitOfWork, csv_path: Path, limit: int | None) -> int:

@@ -30,7 +30,9 @@ async def cod_cliente(session_factory) -> int:
 
 
 @pytest.mark.asyncio
-async def test_decide_persists_auditable_decision(client, cod_cliente, session_factory):
+async def test_decide_persists_auditable_decision(
+    client, mock_model_service, cod_cliente, session_factory
+):
     resp = await client.post("/decide", json={"codCliente": cod_cliente, "channel": "app"})
     assert resp.status_code == 200
     body = resp.json()
@@ -45,7 +47,7 @@ async def test_decide_persists_auditable_decision(client, cod_cliente, session_f
 
 
 @pytest.mark.asyncio
-async def test_full_loop_decide_reward(client, cod_cliente, session_factory):
+async def test_full_loop_decide_reward(client, mock_model_service, cod_cliente, session_factory):
     decided = (
         await client.post("/decide", json={"codCliente": cod_cliente, "channel": "app"})
     ).json()
@@ -62,7 +64,7 @@ async def test_full_loop_decide_reward(client, cod_cliente, session_factory):
 
 
 @pytest.mark.asyncio
-async def test_showcase_returns_ranked_offers(client, cod_cliente):
+async def test_showcase_returns_ranked_offers(client, mock_model_service, cod_cliente):
     resp = await client.post("/showcase", json={"codCliente": cod_cliente, "topK": 3})
     assert resp.status_code == 200
     items = resp.json()["items"]
@@ -71,7 +73,7 @@ async def test_showcase_returns_ranked_offers(client, cod_cliente):
 
 
 @pytest.mark.asyncio
-async def test_reward_is_binary(client, cod_cliente):
+async def test_reward_is_binary(client, mock_model_service, cod_cliente):
     """Recompensa é 1.0 com clique/conversão e 0.0 sem — não depende mais da receita do braço."""
     did = (
         await client.post("/decide", json={"codCliente": cod_cliente, "channel": "app"})
@@ -93,7 +95,7 @@ async def test_reward_is_binary(client, cod_cliente):
 
 @pytest.mark.asyncio
 async def test_audit_context_separates_excluded_from_monitored(
-    client, cod_cliente, session_factory
+    client, mock_model_service, cod_cliente, session_factory
 ):
     """O log distingue atributo PROIBIDO (sexo) de atributo sensível EM USO (renda).
 
@@ -117,7 +119,7 @@ async def test_audit_context_separates_excluded_from_monitored(
 
 
 @pytest.mark.asyncio
-async def test_decide_unknown_client_returns_404(client, cod_cliente):
+async def test_decide_unknown_client_returns_404(client, mock_model_service, cod_cliente):
     resp = await client.post("/decide", json={"codCliente": 999_999_999, "channel": "app"})
     assert resp.status_code == 404
     assert resp.json()["code"] == "CLIENT_NOT_FOUND"

@@ -20,20 +20,24 @@ from schemas.decisao import (
     ShowcaseResponse,
 )
 from services.decision.service import DecisionService
+from services.model_client import ModelServiceClient
 
 router = APIRouter(tags=["serving"])
+model_client = ModelServiceClient()
 
 
 @router.post("/decide", response_model=DecideResponse)
 async def decide(body: DecideRequest, uow: UnitOfWork = Depends(get_uow)):
-    return await DecisionService(uow).decide(body.cod_cliente, body.channel, body.arm_id)
+    service = DecisionService(uow, model_client)
+    return await service.decide(body.cod_cliente, body.channel, body.arm_id)
 
 
 @router.post("/showcase", response_model=ShowcaseResponse)
 async def showcase(body: ShowcaseRequest, uow: UnitOfWork = Depends(get_uow)):
-    return await DecisionService(uow).showcase(body.cod_cliente, body.channel, body.top_k)
+    service = DecisionService(uow, model_client)
+    return await service.showcase(body.cod_cliente, body.channel, body.top_k)
 
 
 @router.post("/reward", response_model=RewardResponse)
 async def reward(body: RewardRequest, uow: UnitOfWork = Depends(get_uow)):
-    return await DecisionService(uow).reward(body.decision_id, body.converted)
+    return await DecisionService(uow, model_client).reward(body.decision_id, body.converted)

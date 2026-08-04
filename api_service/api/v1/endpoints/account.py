@@ -26,8 +26,10 @@ from schemas.decisao import (
 )
 from services.account.service import AccountService
 from services.decision.service import DecisionService
+from services.model_client import ModelServiceClient
 
 router = APIRouter(prefix="/me", tags=["account"])
+model_client = ModelServiceClient()
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
@@ -45,7 +47,7 @@ async def my_recommendations(
     top_k: int = 5,
 ):
     cod = AccountService.require_cod_cliente(user)
-    return await DecisionService(uow).showcase(cod, channel, top_k)
+    return await DecisionService(uow, model_client).showcase(cod, channel, top_k)
 
 
 @router.post("/decide", response_model=DecideResponse)
@@ -61,19 +63,20 @@ async def my_decision(
     que o usuário clicou na vitrine — o corpo é opcional para não quebrar quem já chama sem ele.
     """
     cod = AccountService.require_cod_cliente(user)
-    return await DecisionService(uow).decide(cod, channel, body.arm_id if body else None)
+    service = DecisionService(uow, model_client)
+    return await service.decide(cod, channel, body.arm_id if body else None)
 
 
 @router.post("/feedback", response_model=FeedbackResponse)
 async def my_feedback(body: FeedbackRequest, user: CurrentUser, uow: UnitOfWork = Depends(get_uow)):
     await AccountService(uow).ensure_owns_decision(user, body.decision_id)
-    return await DecisionService(uow).feedback(body.decision_id, body.type)
+    return await DecisionService(uow, model_client).feedback(body.decision_id, body.type)
 
 
 @router.post("/reward", response_model=RewardResponse)
 async def my_reward(body: RewardRequest, user: CurrentUser, uow: UnitOfWork = Depends(get_uow)):
     await AccountService(uow).ensure_owns_decision(user, body.decision_id)
-    return await DecisionService(uow).reward(body.decision_id, body.converted)
+    return await DecisionService(uow, model_client).reward(body.decision_id, body.converted)
 
 
 @router.get("/decisions", response_model=list[DecisaoResponse])

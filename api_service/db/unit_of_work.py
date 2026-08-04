@@ -3,18 +3,13 @@ from typing import TypeVar, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repositories.aprovacao_humana import AprovacaoHumanaRepository
 from repositories.caso_avaliacao import CasoAvaliacaoRepository
-from repositories.ciclo_retreino import CicloRetreinoRepository
 from repositories.cliente import ClienteRepository
 from repositories.decisao import DecisaoRepository
-from repositories.estado_braco import EstadoBracoRepository
 from repositories.evento_impressao import EventoImpressaoRepository
 from repositories.experimento import ExperimentoRepository
 from repositories.feedback import FeedbackRepository
-from repositories.metrica_monitoramento import MetricaMonitoramentoRepository
 from repositories.oferta import OfertaRepository
-from repositories.politica import PoliticaRepository
 from repositories.recompensa import RecompensaRepository
 from repositories.regra_adequacao import RegraAdequacaoRepository
 from repositories.segmento import SegmentoRepository
@@ -60,14 +55,6 @@ class UnitOfWork:
 
     # ── Decisão & aprendizado ────────────────────────────────────
     @property
-    def politicas(self) -> PoliticaRepository:
-        return self._repo("politicas", PoliticaRepository)
-
-    @property
-    def estados_braco(self) -> EstadoBracoRepository:
-        return self._repo("estados_braco", EstadoBracoRepository)
-
-    @property
     def decisoes(self) -> DecisaoRepository:
         return self._repo("decisoes", DecisaoRepository)
 
@@ -90,20 +77,8 @@ class UnitOfWork:
 
     # ── MLOps & governança ───────────────────────────────────────
     @property
-    def metricas_monitoramento(self) -> MetricaMonitoramentoRepository:
-        return self._repo("metricas_monitoramento", MetricaMonitoramentoRepository)
-
-    @property
     def regras_adequacao(self) -> RegraAdequacaoRepository:
         return self._repo("regras_adequacao", RegraAdequacaoRepository)
-
-    @property
-    def ciclos_retreino(self) -> CicloRetreinoRepository:
-        return self._repo("ciclos_retreino", CicloRetreinoRepository)
-
-    @property
-    def aprovacoes_humanas(self) -> AprovacaoHumanaRepository:
-        return self._repo("aprovacoes_humanas", AprovacaoHumanaRepository)
 
     # ── Ofertas/feedback (fluxo servido pelo model_service) ──────
     # O contexto do cliente vem de `clientes` (acima); `client_profiles` foi consolidado nele.
