@@ -72,6 +72,7 @@ describe('DashboardComponent', () => {
           valorTotal: 1000,
           descontoPct: 5,
           valorFinal: 950,
+          jaAdquirida: false,
         },
       ]),
     ),

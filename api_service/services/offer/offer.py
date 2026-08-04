@@ -47,20 +47,20 @@ class OfferService:
     async def list_offers(
         self, user: User, algorithm: str | None = None, top: int | None = None
     ) -> list[OfferResponse]:
-        """Vitrine do cliente, **sem o que ele já adquiriu**.
+        """Vitrine do cliente: o ranking **completo** do modelo, marcando o que já está na
+        carteira.
 
-        Produto na carteira sai do ranking: continuar oferecendo o que a pessoa acabou de
-        contratar não faz sentido para ela, e gastaria a impressão num braço que já
-        converteu. A exclusão vai no `/rank`, então o model_service ranqueia só o que resta.
+        Antes eu excluía os adquiridos do `/rank`. Com 10 braços no catálogo e a
+        elegibilidade filtrando para ~6, bastavam poucos cliques para a vitrine esvaziar — e
+        uma tela vazia parece modelo quebrado, não catálogo esgotado. O ranking segue
+        completo; quem decide o que fazer com o já adquirido é a apresentação.
         """
         async with self.uow:
             features, segments = await self._resolve_context(user)
-            ja_adquiridas = [arm for arm, _, _ in await self.uow.feedback.clicked_arms(user.id)]
+            ja_adquiridas = {arm for arm, _, _ in await self.uow.feedback.clicked_arms(user.id)}
         algo = algorithm or settings.DEFAULT_ALGORITHM
 
-        result = await self.model_client.rank(
-            algo, features, segments, top, exclude_arm_ids=ja_adquiridas
-        )
+        result = await self.model_client.rank(algo, features, segments, top)
         offers = [
             OfferResponse(
                 arm_id=r["arm_id"],
@@ -72,6 +72,7 @@ class OfferService:
                 valor_total=r.get("valor_total"),
                 desconto_pct=r.get("desconto_pct"),
                 valor_final=r.get("valor_final"),
+                ja_adquirida=r["arm_id"] in ja_adquiridas,
             )
             for r in result["ranked"]
         ]

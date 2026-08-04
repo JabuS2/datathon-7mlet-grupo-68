@@ -21,6 +21,7 @@ describe('InvestmentOpportunitiesComponent', () => {
     valorTotal: 1000,
     descontoPct: 5,
     valorFinal: 950,
+    jaAdquirida: false,
   };
 
   const investimentMock = {
@@ -136,5 +137,25 @@ describe('InvestmentOpportunitiesComponent', () => {
   it('não oferece "ver mais" quando cabe tudo', () => {
     component.opportunities.set([opportunity] as never);
     expect(component.ocultas()).toBe(0);
+  });
+
+  it('empurra os já adquiridos para o fim, sem removê-los', () => {
+    // vitrine vazia parece modelo quebrado; o ranking do bandit vem completo
+    component.opportunities.set([
+      { ...opportunity, armId: 'A', jaAdquirida: true },
+      { ...opportunity, armId: 'B', jaAdquirida: false },
+    ] as never);
+
+    expect(component.ordenadas().map((o) => o.armId)).toEqual(['B', 'A']);
+    expect(component.visiveis()).toHaveLength(2);
+  });
+
+  it('não registra clique em produto já adquirido', () => {
+    fixture.detectChanges();
+    feedbackMock.click.mockClear();
+
+    component.knowMore({ ...opportunity, jaAdquirida: true } as never);
+
+    expect(feedbackMock.click).not.toHaveBeenCalled();
   });
 });

@@ -16,6 +16,7 @@
         [class.border-emerald-400]="escolhido() === opportunity.armId"
         [class.bg-emerald-400/20]="escolhido() === opportunity.armId"
         [class.scale-105]="escolhido() === opportunity.armId"
+        [class.opacity-60]="opportunity.jaAdquirida && escolhido() !== opportunity.armId"
       >
         <div>
           <div class="flex items-center gap-2 mb-3">
@@ -71,11 +72,13 @@
         <button
           type="button"
           (click)="knowMore(opportunity)"
-          [disabled]="enviando() !== null"
+          [disabled]="enviando() !== null || opportunity.jaAdquirida"
           class="mt-6 w-full cursor-pointer rounded-md bg-white py-2.5 text-sm font-semibold uppercase tracking-wide text-black transition hover:bg-gray-100 disabled:cursor-wait disabled:bg-white/40 disabled:text-white/60"
         >
           @if (escolhido() === opportunity.armId) {
             ✓ Adicionado à carteira
+          } @else if (opportunity.jaAdquirida) {
+            Já na sua carteira
           } @else if (enviando() === opportunity.armId) {
             Registrando…
           } @else {

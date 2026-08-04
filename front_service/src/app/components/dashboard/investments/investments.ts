@@ -40,9 +40,21 @@ export class InvestmentOpportunitiesComponent implements OnInit {
   /** Card marcado como escolhido, exibindo a confirmação antes do reload. */
   escolhido = signal<string | null>(null);
 
+  /**
+   * Ranking do modelo com os já adquiridos empurrados para o fim.
+   *
+   * O backend devolve o ranking completo: a ordem é do bandit. Aqui só garantimos que o
+   * que a pessoa pode contratar apareça primeiro — sem remover nada, senão a vitrine
+   * esvazia quando o catálogo se esgota e parece que o modelo parou de recomendar.
+   */
+  ordenadas = computed(() => [
+    ...this.opportunities().filter((o) => !o.jaAdquirida),
+    ...this.opportunities().filter((o) => o.jaAdquirida),
+  ]);
+
   /** O que a vitrine mostra: top 4, ou tudo quando expandida. */
   visiveis = computed(() =>
-    this.expandido() ? this.opportunities() : this.opportunities().slice(0, TOP_VISIVEL),
+    this.expandido() ? this.ordenadas() : this.ordenadas().slice(0, TOP_VISIVEL),
   );
 
   ocultas = computed(() => Math.max(this.opportunities().length - TOP_VISIVEL, 0));
@@ -65,7 +77,7 @@ export class InvestmentOpportunitiesComponent implements OnInit {
    * não teria efeito visível — era o que acontecia antes, quando isto só dava `console.log`.
    */
   knowMore(opportunity: RecommendationItem): void {
-    if (this.enviando()) return;
+    if (this.enviando() || opportunity.jaAdquirida) return;
     this.enviando.set(opportunity.armId);
 
     this.feedbackService
