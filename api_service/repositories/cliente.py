@@ -69,3 +69,26 @@ class ClienteRepository(BaseRepository[Cliente]):
         stmt = stmt.order_by(Cliente.cod_cliente.desc()).limit(1)
         result: int | None = await self.session.scalar(stmt)
         return result
+
+    async def renda_percentil(self, valor: float | None) -> float:
+        """Percentil (0–100) da renda na base de clientes.
+
+        As regras de segmento sintético comparam contra a distribuição da população, não
+        contra um limiar fixo. Calculado em SQL sobre `clientes` — a mesma base que gerou o
+        golden set — em vez de recarregar o CSV a cada onboarding.
+        """
+        if valor is None:
+            return 50.0
+        total = await self.session.scalar(
+            select(func.count())
+            .select_from(Cliente)
+            .where(Cliente.renda_estimada_anual_brl.isnot(None))
+        )
+        if not total:
+            return 50.0
+        abaixo = await self.session.scalar(
+            select(func.count())
+            .select_from(Cliente)
+            .where(Cliente.renda_estimada_anual_brl <= valor)
+        )
+        return float(abaixo or 0) / float(total) * 100.0
