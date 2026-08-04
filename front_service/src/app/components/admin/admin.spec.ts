@@ -141,4 +141,113 @@ describe('Admin', () => {
     component.apurar('linucb-v1');
     expect(component.apuracao()).toBeNull();
   });
+
+  // ── renderização das abas ──────────────────────────────────
+  // O template é a maior parte do console; sem renderizar cada aba, os ramos de exibição
+  // (badges de status, tabelas, estados vazios) nunca são exercitados.
+
+  it('renderiza a aba de políticas com status e ação', () => {
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Operação do modelo');
+    expect(texto).toContain('linucb-v1');
+    expect(texto).toContain('active');
+    expect(texto).toContain('shadow');
+    // a ativa não oferece "Promover"
+    expect(texto).toContain('Promover');
+  });
+
+  it('renderiza a tabela de pesos ao expandir', () => {
+    component.verBracos('linucb-v1');
+    fixture.detectChanges();
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('OFF-CR-001');
+    expect(texto).toContain('b_norm');
+    expect(texto).toContain('Ocultar pesos');
+  });
+
+  it('renderiza a apuração com o n de decisões', () => {
+    component.apurar('linucb-v1');
+    fixture.detectChanges();
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Apuração');
+    expect(texto).toContain('3 decisões');
+    expect(texto).toContain('regret');
+  });
+
+  it('avisa quando a apuração não tem decisões no período', () => {
+    governanceMock.computeMetrics.mockReturnValueOnce(
+      of({ policyVersion: 'linucb-v1', windowDays: 14, decisions: 0, metrics: [] }),
+    );
+    component.apurar('linucb-v1');
+    fixture.detectChanges();
+
+    // zero por ausência de dado não é zero de performance
+    expect(fixture.nativeElement.textContent).toContain('ausência de dado');
+  });
+
+  it('renderiza a aba de ciclos com o gate pendente', () => {
+    component.trocarAba('ciclos');
+    fixture.detectChanges();
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('run-1');
+    expect(texto).toContain('candidate');
+    expect(texto).toContain('Aprovar e promover');
+    expect(texto).toContain('aguardando o gate humano');
+    expect(texto).toContain('modelo v3 no MLflow');
+  });
+
+  it('renderiza a aba de métricas vazia com instrução', () => {
+    component.trocarAba('metricas');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Nada publicado ainda');
+  });
+
+  it('renderiza métricas publicadas com destaque de alerta', () => {
+    component.metricas.set([
+      { id: 1, policy_id: 'linucb-v1', metric: 'psi_drift', value: 0.4, alert: true, created_at: '' },
+    ]);
+    component.trocarAba('metricas');
+    fixture.detectChanges();
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('psi_drift');
+    expect(texto).toContain('alerta');
+  });
+
+  it('renderiza a aba MLflow com o resumo do registry', () => {
+    component.trocarAba('mlflow');
+    fixture.detectChanges();
+
+    const texto = fixture.nativeElement.textContent as string;
+    expect(texto).toContain('Modelos registrados');
+    expect(texto).toContain('linucb-v1');
+    expect(texto).toContain('v2');
+    expect(texto).toContain('Abrir em nova aba');
+  });
+
+  it('avisa quando não há política registrada', () => {
+    component.politicas.set([]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('seed_policies.py');
+  });
+
+  it('avisa quando não há ciclo aberto', () => {
+    component.ciclos.set([]);
+    component.trocarAba('ciclos');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Nenhum ciclo aberto');
+  });
+
+  it('promover recarrega o estado', () => {
+    component.promover('thompson-v1');
+    expect(governanceMock.promote).toHaveBeenCalledWith('thompson-v1');
+    // recarrega: policies é chamado no init e de novo após a ação
+    expect(governanceMock.policies).toHaveBeenCalledTimes(2);
+  });
 });

@@ -52,4 +52,12 @@ describe('Investiment', () => {
   afterEach(() => {
     httpMock.verify();
   });
+
+  it('lê a carteira (interests)', () => {
+    service.interests().subscribe();
+
+    const req = httpMock.expectOne('http://localhost:8001/api/v1/interests');
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
 });
