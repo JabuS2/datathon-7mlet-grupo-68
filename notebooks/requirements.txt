@@ -1,0 +1,19 @@
+# Dependências dos notebooks de análise.
+#
+# Os notebooks são autocontidos: leem apenas `data/golden_set/` (versionado) e não
+# importam nada de `api_service/` ou `model_service/`. Por isso têm requirements
+# próprios, separados dos pyproject.toml dos serviços.
+#
+#   python -m venv .venv && .venv/bin/pip install -r notebooks/requirements.txt
+#   jupyter lab notebooks/
+
+pandas==2.2.3
+numpy==2.1.3
+matplotlib==3.9.2
+seaborn==0.13.2
+
+# Execução headless (usada pelo job `notebooks` do CI).
+jupyter-core==5.7.2
+nbconvert==7.16.4
+nbclient==0.10.0
+ipykernel==6.29.5

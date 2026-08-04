@@ -97,3 +97,36 @@ jobs:
         with:
           name: frontend-coverage
           path: front_service/coverage
+
+  notebooks:
+    # Smoke test: executa os três notebooks de análise ponta a ponta e descarta a
+    # saída. Eles leem só `data/golden_set/` (versionado, 680 KB), então não
+    # dependem do Kaggle nem de nenhum serviço no ar. ~30s no total.
+    runs-on: ubuntu-latest
+
+    env:
+      MPLBACKEND: Agg
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: notebooks/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r notebooks/requirements.txt
+
+      # --output-dir aponta para fora do repo: os notebooks executados nunca
+      # substituem os versionados.
+      - name: Execute notebooks
+        run: |
+          for nb in notebooks/*.ipynb; do
+            echo "::group::$nb"
+            jupyter nbconvert --execute --to notebook --output-dir /tmp/nbout "$nb"
+            echo "::endgroup::"
+          done

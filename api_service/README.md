@@ -179,12 +179,11 @@ datathon-7mlet-grupo-68/
 ├── agent_service/                  # agente LangChain
 ├── mcp_server/                     # servidor MCP (tools/widgets)
 │
-├── data/
-│   ├── kaggle/                     # fonte, versão, licença (só README)
-│   ├── processed/                  # vazio
-│   ├── synthetic_enrichment/       # vazio
-│   ├── golden_set/                 # offer_catalog.json · golden_clients.csv
-│   └── rag_corpus/                 # vazio
+├── data/                           # cadeia de dados — ver data/README.md
+│   ├── kaggle/                     # bruto (download manual, fora do git)
+│   ├── processed/                  # derivado (fora do git)
+│   ├── synthetic_enrichment/       # derivado (fora do git)
+│   └── golden_set/                 # VERSIONADO — é o que a aplicação lê
 │
 ├── docs/                           # mkdocs (ver mkdocs.yml)
 ├── notebooks/                      # EDA, exploração MAB, simulação LinUCB
