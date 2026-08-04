@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from repositories.aprovacao_humana import AprovacaoHumanaRepository
 from repositories.caso_avaliacao import CasoAvaliacaoRepository
 from repositories.ciclo_retreino import CicloRetreinoRepository
-from repositories.client_profile import ClientProfileRepository
 from repositories.cliente import ClienteRepository
 from repositories.decisao import DecisaoRepository
 from repositories.estado_braco import EstadoBracoRepository
@@ -107,10 +106,7 @@ class UnitOfWork:
         return self._repo("aprovacoes_humanas", AprovacaoHumanaRepository)
 
     # ── Ofertas/feedback (fluxo servido pelo model_service) ──────
-    @property
-    def profiles(self) -> ClientProfileRepository:
-        return self._repo("profiles", ClientProfileRepository)
-
+    # O contexto do cliente vem de `clientes` (acima); `client_profiles` foi consolidado nele.
     @property
     def feedback(self) -> FeedbackRepository:
         return self._repo("feedback", FeedbackRepository)

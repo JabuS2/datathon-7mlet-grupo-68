@@ -69,6 +69,16 @@ class Cliente(Base):
         OrigemCliente, nullable=False, default=OrigemCliente.SEED
     )
 
+    def to_context(self) -> dict:
+        """Projeção do cliente como dicionário de contexto para o bandit.
+
+        Devolve todas as colunas. A seleção do que vira feature é de quem consome:
+        `ReferenceStats.context_vector` (in-process) e o `ContextBuilder` (model_service)
+        usam só as `context_features` declaradas no catálogo, e `sexo` fica de fora das duas
+        — o `_audit_context` do engine o declara em `atributos_excluidos`.
+        """
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+
     # --- 24 flags de posse de produto (base da recompensa) ---
     possui_poupanca: Mapped[bool] = _flag()
     possui_conta_corrente: Mapped[bool] = _flag()

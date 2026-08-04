@@ -299,7 +299,8 @@ GET /api/v1/offers?algorithm=linucb&top=5
     "valorTotal": 12000.0, "descontoPct": 5.0, "valorFinal": 11400.0 } ]
 ```
 
-Ranqueada pelo `model_service` a partir do perfil do usuário (`GET/PUT /api/v1/profile`) e já
+Ranqueada pelo `model_service` a partir do `Cliente` vinculado à conta
+(`GET /api/v1/me/profile` lê, `PUT /api/v1/profile` atualiza) e já
 filtrada por elegibilidade. Receita esperada, `contextFeatures` e as regras de `eligibleSegment`
 continuam internas, em `/offers/catalog`, restrita a operador (403 para o cliente).
 

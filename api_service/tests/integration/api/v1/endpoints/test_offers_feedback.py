@@ -1,5 +1,10 @@
 import pytest
+import pytest_asyncio
 from fastapi import status
+
+from db.unit_of_work import UnitOfWork
+from services.seed.seeder import seed_all
+from settings import settings
 
 
 class _FakeModelClient:
@@ -50,14 +55,29 @@ def mock_model(monkeypatch):
     return fake
 
 
+@pytest_asyncio.fixture
+async def seeded(session_factory):
+    """Catálogo + clientes de seed — o onboarding sorteia um template real daqui."""
+    async with session_factory() as s, UnitOfWork(s) as uow:
+        await seed_all(uow, settings.DATA_DIR, client_limit=60)
+
+
 async def _auth_headers(client, email="offers@example.com"):
-    await client.post("/register", json={"email": email, "password": "password123"})
-    resp = await client.post("/login", json={"email": email, "password": "password123"})
+    """Conta da vitrine: `/onboarding` cria o `Cliente` e vincula em `users.cod_cliente`.
+
+    `/register` não serve mais aqui — cria operador, que não tem cliente vinculado e agora
+    recebe 409 NO_CLIENT_PROFILE nas rotas de oferta (ver test_offers_requires_client_profile).
+    """
+    resp = await client.post(
+        "/onboarding",
+        json={"email": email, "password": "password123", "idade": 30, "segmento": "02 - VAREJO"},
+    )
+    assert resp.status_code == status.HTTP_200_OK, resp.text
     return {"Authorization": f"Bearer {resp.json()['accessToken']}"}
 
 
 @pytest.mark.asyncio
-async def test_list_offers_returns_price_fields(client, mock_model):
+async def test_list_offers_returns_price_fields(client, mock_model, seeded):
     headers = await _auth_headers(client)
     resp = await client.get("/offers", headers=headers)
     assert resp.status_code == status.HTTP_200_OK
@@ -75,7 +95,7 @@ async def test_list_offers_requires_auth(client, mock_model):
 
 
 @pytest.mark.asyncio
-async def test_feedback_click_sets_reward_and_updates_model(client, mock_model):
+async def test_feedback_click_sets_reward_and_updates_model(client, mock_model, seeded):
     headers = await _auth_headers(client)
     resp = await client.post(
         "/feedback", headers=headers, json={"armId": "OFF-SEG-003", "clicked": True}
@@ -88,7 +108,7 @@ async def test_feedback_click_sets_reward_and_updates_model(client, mock_model):
 
 
 @pytest.mark.asyncio
-async def test_feedback_no_click_reward_zero(client, mock_model):
+async def test_feedback_no_click_reward_zero(client, mock_model, seeded):
     headers = await _auth_headers(client)
     resp = await client.post(
         "/feedback", headers=headers, json={"armId": "OFF-CR-001", "clicked": False}
@@ -98,7 +118,7 @@ async def test_feedback_no_click_reward_zero(client, mock_model):
 
 
 @pytest.mark.asyncio
-async def test_feedback_recomputes_next_offers(client, mock_model):
+async def test_feedback_recomputes_next_offers(client, mock_model, seeded):
     headers = await _auth_headers(client)
     # arm que começa em último
     before = await client.get("/offers", headers=headers)
@@ -110,16 +130,49 @@ async def test_feedback_recomputes_next_offers(client, mock_model):
 
 
 @pytest.mark.asyncio
-async def test_profile_upsert_and_get(client, mock_model):
+async def test_profile_update_is_partial_and_typed(client, mock_model, seeded):
+    """`PUT /profile` atualiza colunas de `clientes`; campos omitidos não mudam."""
     headers = await _auth_headers(client)
-    payload = {
-        "features": {"idade": 45, "renda_estimada_anual_brl": 120000, "ind_ativo": 1},
-        "segments": ["SEG-ALTA-RENDA", "SEG-VIP"],
-    }
-    put = await client.put("/profile", headers=headers, json=payload)
-    assert put.status_code == status.HTTP_200_OK
-    assert put.json()["segments"] == ["SEG-ALTA-RENDA", "SEG-VIP"]
+    antes = (await client.get("/me/profile", headers=headers)).json()
 
-    got = await client.get("/profile", headers=headers)
-    assert got.status_code == status.HTTP_200_OK
-    assert got.json()["features"]["idade"] == 45
+    put = await client.put(
+        "/profile", headers=headers, json={"idade": 45, "rendaEstimadaAnualBrl": 120000}
+    )
+    assert put.status_code == status.HTTP_200_OK, put.text
+    body = put.json()
+    assert body["idade"] == 45
+    assert body["rendaEstimadaAnualBrl"] == 120000
+    # não mencionado no corpo → preservado
+    assert body["codCliente"] == antes["codCliente"]
+    assert body["segmento"] == antes["segmento"]
+
+    # a leitura canônica (/me/profile) enxerga a mesma coisa
+    depois = (await client.get("/me/profile", headers=headers)).json()
+    assert depois["idade"] == 45
+
+
+@pytest.mark.asyncio
+async def test_profile_update_rejects_unknown_field(client, mock_model, seeded):
+    """`extra="forbid"` no BaseSchema: chave que o modelo ignoraria vira 422, não silêncio."""
+    headers = await _auth_headers(client)
+    resp = await client.put("/profile", headers=headers, json={"featureInventada": 1})
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.asyncio
+async def test_offers_requires_client_profile(client, mock_model, seeded):
+    """Operador (criado por /register) não tem `cod_cliente` → 409, não perfil default."""
+    await client.post("/register", json={"email": "op@example.com", "password": "password123"})
+    token = (
+        await client.post("/login", json={"email": "op@example.com", "password": "password123"})
+    ).json()["accessToken"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    offers = await client.get("/offers", headers=headers)
+    assert offers.status_code == status.HTTP_409_CONFLICT
+    assert offers.json()["code"] == "NO_CLIENT_PROFILE"
+
+    fb = await client.post(
+        "/feedback", headers=headers, json={"armId": "OFF-CR-001", "clicked": True}
+    )
+    assert fb.status_code == status.HTTP_409_CONFLICT

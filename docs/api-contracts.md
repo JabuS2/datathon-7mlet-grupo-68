@@ -129,8 +129,7 @@ acompanhado por fairness de exposição).
 |---|---|---|---|
 | `GET` | `/offers` | `OfferResponse[]` | vitrine ranqueada pelo **model_service** (`?algorithm=&top=`) |
 | `GET` | `/offers/catalog` | `OfertaResponse[]` | catálogo interno (receita, elegibilidade) — **operador** |
-| `GET` | `/profile` | `ProfileResponse` | features/segmentos usados como contexto do bandit |
-| `PUT` | `/profile` | `ProfileResponse` | grava o contexto do usuário logado |
+| `PUT` | `/profile` | `ClienteResponse` | atualização **parcial** do contexto do próprio cliente |
 | `POST` | `/feedback` | `FeedbackResponse` | clique por `armId` → reward 0/1 propagado ao model_service |
 | `GET` | `/segments` | `SegmentoResponse[]` | segmentos sintéticos |
 | `POST` | `/onboarding` | `OnboardingResponse` | cadastro demo (perfil template §6) |

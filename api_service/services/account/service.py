@@ -49,10 +49,14 @@ class AccountService:
         return decision
 
     @staticmethod
+    def no_client_profile() -> Conflict:
+        return Conflict(
+            "Sua conta não tem um perfil de cliente vinculado (use o cadastro da vitrine)",
+            code="NO_CLIENT_PROFILE",
+        )
+
+    @staticmethod
     def require_cod_cliente(user: User) -> int:
         if user.cod_cliente is None:
-            raise Conflict(
-                "Sua conta não tem um perfil de cliente vinculado (use o cadastro da vitrine)",
-                code="NO_CLIENT_PROFILE",
-            )
+            raise AccountService.no_client_profile()
         return user.cod_cliente

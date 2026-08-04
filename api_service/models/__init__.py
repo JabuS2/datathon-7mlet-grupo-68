@@ -2,7 +2,6 @@ from models.aprovacao_humana import AprovacaoHumana
 from models.base import Base, BaseModel
 from models.caso_avaliacao import CasoAvaliacao
 from models.ciclo_retreino import CicloRetreino
-from models.client_profile import ClientProfile
 from models.cliente import Cliente
 from models.decisao import Decisao
 from models.estado_braco import EstadoBraco
@@ -23,7 +22,6 @@ __all__ = [
     "BaseModel",
     "CasoAvaliacao",
     "CicloRetreino",
-    "ClientProfile",
     "Cliente",
     "Decisao",
     "EstadoBraco",
