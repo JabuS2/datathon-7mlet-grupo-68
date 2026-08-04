@@ -30,8 +30,8 @@ export class InvestmentOpportunitiesComponent implements OnInit {
   private feedbackService = inject(Feedback);
   private _snackBar = inject(MatSnackBar);
 
-  /** Avisa o dashboard que a carteira mudou (a carteira relê da API). */
-  interesseRegistrado = output<string>();
+  /** Avisa o dashboard: carteira mudou e o saldo foi debitado. */
+  interesseRegistrado = output<{ armId: string; saldo: number | null }>();
 
   opportunities = signal<RecommendationItem[]>([]);
   expandido = signal(false);
@@ -72,9 +72,19 @@ export class InvestmentOpportunitiesComponent implements OnInit {
       .click(opportunity.armId)
       .pipe(
         // marca o card ANTES de recarregar: a pessoa vê o que escolheu
-        tap(() => {
+        tap((resp) => {
           this.escolhido.set(opportunity.armId);
-          this.interesseRegistrado.emit(opportunity.armId);
+          this.interesseRegistrado.emit({
+            armId: opportunity.armId,
+            saldo: resp.saldoFicticio,
+          });
+          if (resp.saldoInsuficiente) {
+            this._snackBar.open(
+              'Saldo insuficiente — registramos seu interesse mesmo assim.',
+              'Fechar',
+              { duration: 4000, horizontalPosition: 'end', verticalPosition: 'top' },
+            );
+          }
         }),
         delay(CONFIRMACAO_MS),
         switchMap(() => this.investimentService.recommendations()),
@@ -85,7 +95,7 @@ export class InvestmentOpportunitiesComponent implements OnInit {
           this.escolhido.set(null);
           this.enviando.set(null);
           this._snackBar.open(
-            `"${opportunity.productName}" foi para a sua carteira — ofertas atualizadas.`,
+            `"${opportunity.productName}" foi para a sua carteira.`,
             'Fechar',
             { duration: 3000, horizontalPosition: 'end', verticalPosition: 'top' },
           );

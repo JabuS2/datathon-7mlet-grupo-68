@@ -10,10 +10,16 @@ import csv
 import json
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 from models.cliente import PRODUCT_FLAGS
 
 # ─────────────────────────── catálogo de ofertas ───────────────────────────
+
+
+def _optional_float(value: Any) -> float | None:
+    """Campo de preço do catálogo — ausente em braços não precificados."""
+    return float(value) if value is not None else None
 
 
 def load_offer_catalog(path: str | Path) -> list[dict]:
@@ -33,6 +39,9 @@ def load_offer_catalog(path: str | Path) -> list[dict]:
                 "description": off["description"],
                 "category": off["category"],
                 "expected_revenue_brl": float(off["expected_revenue_brl"]),
+                "valor_total": _optional_float(off.get("valor_total")),
+                "desconto_pct": _optional_float(off.get("desconto_pct")),
+                "valor_final": _optional_float(off.get("valor_final")),
                 "context_features": off.get("context_features", []),
                 "eligible_segment": off.get("eligible_segment", {}),
                 "ucb_exploration_factor": float(

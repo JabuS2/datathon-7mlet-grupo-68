@@ -115,4 +115,23 @@ describe('DashboardComponent', () => {
     expect(textContent).toContain('Transações Recentes');
     expect(investimentServiceMock.recommendations).toHaveBeenCalledOnce();
   });
+
+  it('atualiza o saldo exibido com o valor que o servidor devolveu', () => {
+    fixture.detectChanges();
+    const antes = component.profile()?.saldoFicticio;
+
+    component.aoRegistrarInteresse({ armId: 'ARM-001', saldo: 1234.5 });
+
+    expect(component.profile()?.saldoFicticio).toBe(1234.5);
+    expect(component.profile()?.saldoFicticio).not.toBe(antes);
+  });
+
+  it('ignora saldo nulo (conta sem saldo definido)', () => {
+    fixture.detectChanges();
+    const antes = component.profile()?.saldoFicticio;
+
+    component.aoRegistrarInteresse({ armId: 'ARM-001', saldo: null });
+
+    expect(component.profile()?.saldoFicticio).toBe(antes);
+  });
 });

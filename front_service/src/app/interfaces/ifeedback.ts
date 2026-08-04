@@ -11,4 +11,11 @@ export interface IFeedbackResponse {
   reward: number;
   algorithm: string;
   status: string;
+
+  /** Quanto saiu do saldo (0 quando não há preço ou faltou saldo). */
+  valorDebitado: number;
+  /** Saldo já atualizado — a tela usa este valor em vez de recalcular. */
+  saldoFicticio: number | null;
+  /** Produto tem preço mas o saldo não cobria. O interesse é registrado mesmo assim. */
+  saldoInsuficiente: boolean;
 }

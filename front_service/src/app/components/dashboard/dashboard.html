@@ -4,7 +4,7 @@
   <app-topbar />
 
   <main class="max-w-[1440px] mx-auto px-6 lg:px-10 pt-20 pb-10">
-    <app-investments (interesseRegistrado)="aoRegistrarInteresse()" />
+    <app-investments (interesseRegistrado)="aoRegistrarInteresse($event)" />
     @if (profile(); as profile) {
       <app-hero-metrics [profile]="profile" />
 

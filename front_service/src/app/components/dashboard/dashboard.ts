@@ -32,8 +32,16 @@ export class DashboardComponent implements OnInit {
   /** Incrementa a cada interesse registrado — faz a carteira reler da API. */
   carteiraVersao = signal(0);
 
-  aoRegistrarInteresse(): void {
+  /**
+   * Atualiza carteira e saldo depois de uma compra.
+   *
+   * O saldo vem da resposta do feedback — quem debita é o servidor, com o preço do
+   * catálogo. Recalcular aqui abriria espaço para a tela divergir do banco.
+   */
+  aoRegistrarInteresse(evento: { armId: string; saldo: number | null }): void {
     this.carteiraVersao.update((v) => v + 1);
+    if (evento.saldo === null) return;
+    this.profile.update((p) => (p ? { ...p, saldoFicticio: evento.saldo } : p));
   }
 
   ngOnInit() {

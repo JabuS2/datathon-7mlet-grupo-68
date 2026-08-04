@@ -24,6 +24,13 @@ class Oferta(Base):
     # Receita esperada (termo de receita do reward composto)
     expected_revenue_brl: Mapped[float] = mapped_column(Float, nullable=False)
 
+    # Valores comerciais do catálogo. Ficam aqui — e não só no JSON lido pelo model_service —
+    # porque o débito no saldo do cliente precisa de um preço confiável do lado do servidor;
+    # aceitar o valor que o front manda seria deixar o cliente escolher quanto pagar.
+    valor_total: Mapped[float | None] = mapped_column(Float, nullable=True)
+    desconto_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    valor_final: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     # Colunas extraídas como contexto do LinUCB
     context_features: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     # Filtros de elegibilidade (ex.: {"santander_filters": {...}})

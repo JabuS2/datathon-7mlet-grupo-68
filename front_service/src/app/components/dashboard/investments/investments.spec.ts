@@ -28,7 +28,16 @@ describe('InvestmentOpportunitiesComponent', () => {
   };
 
   const feedbackMock = {
-    click: vi.fn().mockReturnValue(of({ armId: 'ARM-001', clicked: true, reward: 1 })),
+    click: vi.fn().mockReturnValue(
+      of({
+        armId: 'ARM-001',
+        clicked: true,
+        reward: 1,
+        valorDebitado: 45,
+        saldoFicticio: 8705,
+        saldoInsuficiente: false,
+      }),
+    ),
   };
 
   beforeEach(async () => {
@@ -89,15 +98,16 @@ describe('InvestmentOpportunitiesComponent', () => {
     vi.useRealTimers();
   });
 
-  it('emite o evento que faz a carteira recarregar', () => {
+  it('emite o braço e o saldo já debitado pelo servidor', () => {
     vi.useFakeTimers();
     fixture.detectChanges();
-    const emitido: string[] = [];
-    component.interesseRegistrado.subscribe((arm) => emitido.push(arm));
+    const emitido: { armId: string; saldo: number | null }[] = [];
+    component.interesseRegistrado.subscribe((e) => emitido.push(e));
 
     component.knowMore(opportunity as never);
 
-    expect(emitido).toEqual(['ARM-001']);
+    // o saldo vem da resposta: quem debita é o servidor, com o preço do catálogo
+    expect(emitido).toEqual([{ armId: 'ARM-001', saldo: 8705 }]);
     vi.useRealTimers();
   });
 

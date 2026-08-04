@@ -8,6 +8,8 @@ respondidos. Persistimos `cliente(origem='demo')` + `usuario(tipo='demo')` e dev
 
 from __future__ import annotations
 
+import random
+
 from core.jwt_token import JwtToken
 from db.unit_of_work import UnitOfWork
 from enums.catalogo import OrigemCliente
@@ -26,11 +28,12 @@ from services.demo.segments import compute_segments
 # Faixa reservada de ids p/ perfis criados na vitrine (rastreáveis / purgáveis — LGPD).
 DEMO_COD_BASE = 9_000_000
 
-#: Saldo exibido na vitrine = este múltiplo da renda MENSAL.
-#: É cosmético (nunca entra na decisão — ver `models/user.py`), mas não pode ser aleatório:
-#: derivado da renda respondida, o número fica coerente com o perfil e a demo é
-#: reproduzível. Antes ficava `NULL` e a tela mostrava "R$" sem valor.
-SALDO_MESES_DE_RENDA = 2.5
+#: Faixa do saldo inicial sorteado na criação do perfil.
+#: É valor de vitrine — nunca entra na decisão (ver `models/user.py`) — e serve para o
+#: visitante ter com que "comprar" as ofertas. Sorteado uma vez e persistido: a partir daí
+#: é o débito de cada produto escolhido que o move, não um número novo a cada request.
+SALDO_INICIAL_MIN = 5_000.0
+SALDO_INICIAL_MAX = 50_000.0
 
 
 class OnboardingService:
@@ -52,7 +55,7 @@ class OnboardingService:
                 hashed_password=self.jwt.hash_password(req.password),
                 tipo=TipoUsuario.DEMO,
                 cod_cliente=cliente.cod_cliente,
-                saldo_ficticio=self._saldo_ficticio(cliente.renda_estimada_anual_brl),
+                saldo_ficticio=self._saldo_ficticio(),
             )
             self.uow.users.add(user)
             await self.uow.session.flush()  # materializa user.id
@@ -79,7 +82,7 @@ class OnboardingService:
                 fresh.cod_cliente = cliente.cod_cliente
                 # a conta passa a ser um cliente da vitrine, não um operador
                 fresh.tipo = TipoUsuario.DEMO
-                fresh.saldo_ficticio = self._saldo_ficticio(cliente.renda_estimada_anual_brl)
+                fresh.saldo_ficticio = self._saldo_ficticio()
             await self.uow.session.flush()
             return ClienteResponse.model_validate(cliente)
 
@@ -101,11 +104,9 @@ class OnboardingService:
         return self._from_template(template, req, cod_cliente, renda, percentil)
 
     @staticmethod
-    def _saldo_ficticio(renda_anual: float | None) -> float:
-        """Saldo de exibição a partir da renda anual respondida."""
-        if not renda_anual:
-            return 0.0
-        return round(renda_anual / 12 * SALDO_MESES_DE_RENDA, 2)
+    def _saldo_ficticio() -> float:
+        """Saldo inicial sorteado, persistido no usuário."""
+        return round(random.uniform(SALDO_INICIAL_MIN, SALDO_INICIAL_MAX), 2)
 
     @staticmethod
     def _next_demo_cod(max_demo: int | None) -> int:

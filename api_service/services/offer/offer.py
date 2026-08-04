@@ -47,11 +47,20 @@ class OfferService:
     async def list_offers(
         self, user: User, algorithm: str | None = None, top: int | None = None
     ) -> list[OfferResponse]:
+        """Vitrine do cliente, **sem o que ele já adquiriu**.
+
+        Produto na carteira sai do ranking: continuar oferecendo o que a pessoa acabou de
+        contratar não faz sentido para ela, e gastaria a impressão num braço que já
+        converteu. A exclusão vai no `/rank`, então o model_service ranqueia só o que resta.
+        """
         async with self.uow:
             features, segments = await self._resolve_context(user)
+            ja_adquiridas = [arm for arm, _, _ in await self.uow.feedback.clicked_arms(user.id)]
         algo = algorithm or settings.DEFAULT_ALGORITHM
 
-        result = await self.model_client.rank(algo, features, segments, top)
+        result = await self.model_client.rank(
+            algo, features, segments, top, exclude_arm_ids=ja_adquiridas
+        )
         offers = [
             OfferResponse(
                 arm_id=r["arm_id"],
@@ -79,8 +88,16 @@ class OfferService:
         return offers
 
     async def submit_feedback(self, user: User, data: FeedbackCreate) -> FeedbackResponse:
+        """Registra o clique, debita o produto do saldo e realimenta o modelo.
+
+        O débito **não** condiciona o aprendizado: se o saldo não cobrir, o interesse é
+        registrado do mesmo jeito e o modelo aprende. Bloquear o feedback por falta de saldo
+        faria o bandit parar de aprender justamente com quem mais clica.
+        """
         reward = 1.0 if data.clicked else 0.0
         algo = data.algorithm or settings.DEFAULT_ALGORITHM
+        debitado = 0.0
+        insuficiente = False
 
         async with self.uow:
             features, segments = await self._resolve_context(user)
@@ -94,6 +111,23 @@ class OfferService:
                 )
             )
 
+            if data.clicked:
+                # preço do CATÁLOGO, não do corpo da requisição
+                oferta = await self.uow.ofertas.get_by_arm_id(data.arm_id)
+                preco = (oferta.valor_final if oferta else None) or 0.0
+                conta = await self.uow.users.get_by_id(user.id)
+                saldo = (conta.saldo_ficticio if conta else None) or 0.0
+                if preco > 0 and conta is not None:
+                    if saldo >= preco:
+                        conta.saldo_ficticio = round(saldo - preco, 2)
+                        debitado = preco
+                    else:
+                        insuficiente = True
+                saldo_final = conta.saldo_ficticio if conta else None
+            else:
+                conta = await self.uow.users.get_by_id(user.id)
+                saldo_final = conta.saldo_ficticio if conta else None
+
         # propaga o feedback ao modelo (recalcula as próximas ofertas do usuário)
         await self.model_client.update(algo, data.arm_id, reward, features, segments)
 
@@ -106,6 +140,8 @@ class OfferService:
                 "clicked": data.clicked,
                 "reward": reward,
                 "algorithm": algo,
+                "valor_debitado": debitado,
+                "saldo_insuficiente": insuficiente,
             },
         )
         return FeedbackResponse(
@@ -114,6 +150,9 @@ class OfferService:
             reward=reward,
             algorithm=algo,
             status="applied",
+            valor_debitado=debitado,
+            saldo_ficticio=saldo_final,
+            saldo_insuficiente=insuficiente,
         )
 
     async def list_interests(self, user: User) -> list[InteresseResponse]:
