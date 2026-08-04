@@ -158,4 +158,28 @@ describe('InvestmentOpportunitiesComponent', () => {
 
     expect(feedbackMock.click).not.toHaveBeenCalled();
   });
+
+  it('"ver mais" conta só as contratáveis', () => {
+    // 6 ofertas: 2 contratáveis + 4 já na carteira. Top 4 mostra as 2 contratáveis e 2
+    // adquiridas; as 2 escondidas são adquiridas, então não há o que prometer expandir.
+    component.opportunities.set([
+      { ...opportunity, armId: 'A', jaAdquirida: false },
+      { ...opportunity, armId: 'B', jaAdquirida: false },
+      { ...opportunity, armId: 'C', jaAdquirida: true },
+      { ...opportunity, armId: 'D', jaAdquirida: true },
+      { ...opportunity, armId: 'E', jaAdquirida: true },
+      { ...opportunity, armId: 'F', jaAdquirida: true },
+    ] as never);
+
+    expect(component.visiveis()).toHaveLength(4);
+    expect(component.ocultas()).toBe(0);
+  });
+
+  it('conta as contratáveis escondidas quando existem', () => {
+    component.opportunities.set(
+      Array.from({ length: 7 }, (_, i) => ({ ...opportunity, armId: `A${i}`, jaAdquirida: false })) as never,
+    );
+
+    expect(component.ocultas()).toBe(3);
+  });
 });

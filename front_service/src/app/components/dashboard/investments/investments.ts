@@ -57,7 +57,18 @@ export class InvestmentOpportunitiesComponent implements OnInit {
     this.expandido() ? this.ordenadas() : this.ordenadas().slice(0, TOP_VISIVEL),
   );
 
-  ocultas = computed(() => Math.max(this.opportunities().length - TOP_VISIVEL, 0));
+  /**
+   * Quantas ofertas **contratáveis** ficaram fora do top 4.
+   *
+   * Conta só as não adquiridas: "Ver mais 3 ofertas" quando as três são produtos que a
+   * pessoa já tem é uma promessa que a expansão não cumpre. Como as adquiridas ficam no
+   * fim de `ordenadas`, as escondidas são justamente as que sobram depois do corte.
+   */
+  ocultas = computed(() =>
+    this.ordenadas()
+      .slice(TOP_VISIVEL)
+      .filter((o) => !o.jaAdquirida).length,
+  );
 
   ngOnInit(): void {
     this.investimentService.recommendations().subscribe((response) => {
