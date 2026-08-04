@@ -1,0 +1,50 @@
+<section class="bg-white border border-[#eeeeee] rounded-xl p-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold text-[#1b1b1b]">Minha carteira</h2>
+
+    @if (itens().length) {
+      <span class="text-xs uppercase tracking-wider text-[#5e5e5e]">
+        {{ itens().length }} {{ itens().length === 1 ? 'produto' : 'produtos' }}
+      </span>
+    }
+  </div>
+
+  @if (itens().length) {
+    <ul class="space-y-3">
+      @for (item of itens(); track item.armId) {
+        <li class="flex items-start gap-3 rounded-lg border border-[#eeeeee] p-4">
+          <span
+            class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700"
+          >
+            ✓
+          </span>
+
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <p class="truncate font-medium text-[#1b1b1b]">{{ item.productName }}</p>
+
+              <span
+                class="shrink-0 rounded bg-[#f1f1f1] px-2 py-0.5 text-[10px] uppercase text-[#5e5e5e]"
+              >
+                {{ item.category }}
+              </span>
+            </div>
+
+            <p class="mt-1 line-clamp-2 text-sm text-[#5e5e5e]">{{ item.description }}</p>
+
+            @if (item.cliques > 1) {
+              <p class="mt-1 text-xs text-[#5e5e5e]">
+                Você demonstrou interesse {{ item.cliques }} vezes
+              </p>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="text-sm text-[#5e5e5e]">
+      Sua carteira está vazia. Clique em <strong>Tenho interesse</strong> numa oferta acima
+      e ela aparece aqui — e o modelo passa a aprender com essa escolha.
+    </p>
+  }
+</section>

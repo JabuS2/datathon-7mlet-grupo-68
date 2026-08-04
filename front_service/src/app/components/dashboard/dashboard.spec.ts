@@ -58,6 +58,8 @@ describe('DashboardComponent', () => {
   };
 
   const investimentServiceMock = {
+    // a carteira lê daqui também (WalletComponent)
+    interests: vi.fn().mockReturnValue(of([])),
     recommendations: vi.fn().mockReturnValue(
       of([
         {

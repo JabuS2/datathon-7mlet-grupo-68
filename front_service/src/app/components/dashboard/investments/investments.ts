@@ -1,7 +1,23 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { Investiment } from '../../../services/investiment';
-import { RecommendationItem } from '../../../interfaces/iinvestiment';
 import { DecimalPipe } from '@angular/common';
+import { Component, computed, inject, OnInit, output, signal } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { delay, switchMap, tap } from 'rxjs';
+
+import { RecommendationItem } from '../../../interfaces/iinvestiment';
+import { Feedback } from '../../../services/feedback';
+import { Investiment } from '../../../services/investiment';
+
+/** Quantos cards aparecem antes de "Ver mais". */
+export const TOP_VISIVEL = 4;
+
+/**
+ * Tempo que o card fica marcado como escolhido antes da lista se reordenar.
+ *
+ * Sem essa pausa o clique parece não ter efeito: o reload chega tão rápido que a pessoa vê
+ * a lista pular sem entender o que aconteceu. A confirmação visual vem primeiro, o
+ * reordenamento depois.
+ */
+export const CONFIRMACAO_MS = 900;
 
 @Component({
   selector: 'app-investments',
@@ -11,8 +27,25 @@ import { DecimalPipe } from '@angular/common';
 })
 export class InvestmentOpportunitiesComponent implements OnInit {
   private investimentService = inject(Investiment);
+  private feedbackService = inject(Feedback);
+  private _snackBar = inject(MatSnackBar);
+
+  /** Avisa o dashboard que a carteira mudou (a carteira relê da API). */
+  interesseRegistrado = output<string>();
 
   opportunities = signal<RecommendationItem[]>([]);
+  expandido = signal(false);
+  /** Trava enquanto o clique é processado — evita reward duplicado no mesmo braço. */
+  enviando = signal<string | null>(null);
+  /** Card marcado como escolhido, exibindo a confirmação antes do reload. */
+  escolhido = signal<string | null>(null);
+
+  /** O que a vitrine mostra: top 4, ou tudo quando expandida. */
+  visiveis = computed(() =>
+    this.expandido() ? this.opportunities() : this.opportunities().slice(0, TOP_VISIVEL),
+  );
+
+  ocultas = computed(() => Math.max(this.opportunities().length - TOP_VISIVEL, 0));
 
   ngOnInit(): void {
     this.investimentService.recommendations().subscribe((response) => {
@@ -20,7 +53,52 @@ export class InvestmentOpportunitiesComponent implements OnInit {
     });
   }
 
+  toggleExpandir(): void {
+    this.expandido.update((v) => !v);
+  }
+
+  /**
+   * Clique no card: registra o feedback e **recarrega a vitrine**.
+   *
+   * É o loop do bandit fechando na tela. O reward vai para o model_service, que atualiza o
+   * estado do braço; o `GET /offers` seguinte já vem reordenado. Sem recarregar, o clique
+   * não teria efeito visível — era o que acontecia antes, quando isto só dava `console.log`.
+   */
   knowMore(opportunity: RecommendationItem): void {
-    console.log('Oferta selecionada:', opportunity);
+    if (this.enviando()) return;
+    this.enviando.set(opportunity.armId);
+
+    this.feedbackService
+      .click(opportunity.armId)
+      .pipe(
+        // marca o card ANTES de recarregar: a pessoa vê o que escolheu
+        tap(() => {
+          this.escolhido.set(opportunity.armId);
+          this.interesseRegistrado.emit(opportunity.armId);
+        }),
+        delay(CONFIRMACAO_MS),
+        switchMap(() => this.investimentService.recommendations()),
+      )
+      .subscribe({
+        next: (response) => {
+          this.opportunities.set(response);
+          this.escolhido.set(null);
+          this.enviando.set(null);
+          this._snackBar.open(
+            `"${opportunity.productName}" foi para a sua carteira — ofertas atualizadas.`,
+            'Fechar',
+            { duration: 3000, horizontalPosition: 'end', verticalPosition: 'top' },
+          );
+        },
+        error: () => {
+          this.escolhido.set(null);
+          this.enviando.set(null);
+          this._snackBar.open('Não foi possível registrar seu interesse.', 'Fechar', {
+            duration: 3000,
+            horizontalPosition: 'end',
+            verticalPosition: 'top',
+          });
+        },
+      });
   }
 }

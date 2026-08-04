@@ -7,6 +7,7 @@ from db.dependencies import get_uow
 from db.unit_of_work import UnitOfWork
 from models.user import User
 from schemas.cliente import ClienteResponse
+from schemas.interesse import InteresseResponse
 from schemas.offer import OfferResponse
 from schemas.profile import ProfileUpdate
 from services.model_client import ModelServiceClient
@@ -36,6 +37,16 @@ async def list_offers(
     """
     service = OfferService(uow=uow, model_client=model_client)
     return await service.list_offers(user, algorithm, top)
+
+
+@router.get("/interests", tags=["offers"], response_model=list[InteresseResponse])
+async def list_interests(
+    user: CurrentUser,
+    uow: UnitOfWork = Depends(get_uow),
+):
+    """Carteira: as ofertas em que o usuário clicou, mais recentes primeiro."""
+    service = OfferService(uow=uow, model_client=model_client)
+    return await service.list_interests(user)
 
 
 @router.put("/profile", tags=["offers"], response_model=ClienteResponse)

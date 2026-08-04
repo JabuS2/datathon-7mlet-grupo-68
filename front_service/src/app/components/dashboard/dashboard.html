@@ -4,13 +4,17 @@
   <app-topbar />
 
   <main class="max-w-[1440px] mx-auto px-6 lg:px-10 pt-20 pb-10">
-    <app-investments />
+    <app-investments (interesseRegistrado)="aoRegistrarInteresse()" />
     @if (profile(); as profile) {
       <app-hero-metrics [profile]="profile" />
 
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 my-6">
-        <app-transactions class="xl:col-span-8" />
+        <app-wallet class="xl:col-span-8" [refreshKey]="carteiraVersao()" />
         <app-products-card class="xl:col-span-4" [profile]="profile" />
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 my-6">
+        <app-transactions />
       </div>
 
       <app-segments-card />

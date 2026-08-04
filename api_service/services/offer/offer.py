@@ -8,6 +8,7 @@ from models.feedback import FeedbackEvent
 from models.user import User
 from schemas.cliente import ClienteResponse
 from schemas.feedback import FeedbackCreate, FeedbackResponse
+from schemas.interesse import InteresseResponse
 from schemas.offer import OfferResponse
 from schemas.profile import ProfileUpdate
 from services.account.service import AccountService
@@ -114,6 +115,34 @@ class OfferService:
             algorithm=algo,
             status="applied",
         )
+
+    async def list_interests(self, user: User) -> list[InteresseResponse]:
+        """A carteira: ofertas em que o usuário clicou, enriquecidas pelo catálogo.
+
+        Sem tabela própria — deriva de `feedback_events`, o mesmo log que alimenta o modelo.
+        Assim o que a tela mostra e o que o bandit aprendeu não podem divergir.
+        """
+        async with self.uow:
+            cliques = await self.uow.feedback.clicked_arms(user.id)
+            if not cliques:
+                return []
+            ofertas = {o.arm_id: o for o in await self.uow.ofertas.get_all()}
+            itens = []
+            for arm_id, n, ultimo in cliques:
+                oferta = ofertas.get(arm_id)
+                if oferta is None:
+                    continue  # braço saiu do catálogo: não inventamos nome
+                itens.append(
+                    InteresseResponse(
+                        arm_id=arm_id,
+                        product_name=oferta.product_name,
+                        description=oferta.description,
+                        category=oferta.category,
+                        cliques=n,
+                        ultimo_clique=ultimo,
+                    )
+                )
+            return itens
 
     async def update_profile(self, user: User, data: ProfileUpdate) -> ClienteResponse:
         """Atualização parcial do contexto do próprio cliente. Campos omitidos não mudam."""
