@@ -15,6 +15,7 @@ from models import (
     ThompsonSampling,
     model_from_state,
 )
+from service.audit import build_audit, strip_protected
 from service.policy_resolver import ResolvedPolicy, auto_policy
 from store.state_store import StateStore
 
@@ -111,6 +112,9 @@ class BanditService:
         cb = await self._ctx_builder()
         model = await self._load_or_init(pol, cb.dim)
 
+        # defesa em profundidade: o api_service já não envia atributos protegidos
+        client = strip_protected(client)
+
         mask = self.catalog.eligibility_mask(client)
         exclude: list[int] = []
         for aid in exclude_arm_ids or []:
@@ -131,6 +135,7 @@ class BanditService:
                     "score": round(ra.score, 6),
                     "pred": round(ra.pred, 6),
                     "bonus": round(ra.bonus, 6),
+                    "reason_codes": list(ra.reason_codes),
                     "category": o["category"],
                     "product_name": o["product_name"],
                     "description": o["description"],
@@ -139,9 +144,29 @@ class BanditService:
                     "valor_final": o.get("valor_final"),
                 }
             )
+        # elegíveis = a máscara, não o recorte do `top`: a auditoria precisa do conjunto
+        # que o cliente poderia ter recebido, não do que coube na vitrine.
+        eligible_ids = [
+            self.catalog.offer(j)["arm_id"] for j, ok in enumerate(mask) if ok
+        ]
+        audit = build_audit(
+            client=client,
+            segments=segments,
+            ctx_cols=list(self.catalog.ctx_cols),
+            renda_percentil=self.catalog.income_percentile(
+                float(client.get("renda_estimada_anual_brl") or 0.0)
+            ),
+            eligible_arm_ids=eligible_ids,
+        )
+
         if top is not None:
             results = results[:top]
-        return {"algorithm": pol.algorithm, "policy_id": pol.policy_id, "ranked": results}
+        return {
+            "algorithm": pol.algorithm,
+            "policy_id": pol.policy_id,
+            "ranked": results,
+            "audit": audit,
+        }
 
     async def update(
         self,

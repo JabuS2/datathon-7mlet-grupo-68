@@ -52,7 +52,9 @@ class DeterministicBaseline(BanditModel):
             if not eligible_mask[j] or j in exclude:
                 continue
             score = 1.0 if self.arm_categories[j] == target else 0.0
-            rows.append(RankedArm(j, score, score, 0.0))
+            # determinístico: não explora, então não há explore/exploit a declarar
+            reasons = ["policy:baseline", f"target_category:{target}"]
+            rows.append(RankedArm(j, score, score, 0.0, reasons))
         # categoria-alvo primeiro; empate mantém a ordem do catálogo (arm_index crescente)
         return sorted(rows, key=lambda r: (-r.score, r.arm_index))
 

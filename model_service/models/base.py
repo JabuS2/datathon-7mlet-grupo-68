@@ -29,6 +29,14 @@ class RankedArm:
     score: float
     pred: float
     bonus: float
+    #: Justificativa da posição, preenchida por cada modelo. Entra no `Decisao.reason_codes`
+    #: do api_service — é o que permite auditar por que uma oferta foi servida (Etapa 5).
+    reason_codes: list[str] = field(default_factory=list)
+
+
+def explore_or_exploit(bonus: float, pred: float) -> str:
+    """Rótulo de exploração: o bônus de incerteza domina a predição?"""
+    return "explore" if bonus > abs(pred) else "exploit"
 
 
 class BanditModel(ABC):

@@ -30,6 +30,8 @@ class RankedOffer(BaseModel):
     score: float
     pred: float
     bonus: float
+    #: Justificativa da posição (`policy:linucb`, `explore`/`exploit`, `cold_start`, ...).
+    reason_codes: list[str] = Field(default_factory=list)
     category: str
     product_name: str
     description: str
@@ -38,10 +40,23 @@ class RankedOffer(BaseModel):
     valor_final: float | None = None
 
 
+class AuditContext(BaseModel):
+    """O que entrou na decisão — vai para `Decisao.context` no api_service (Etapa 5/LGPD)."""
+
+    features_numericas: dict[str, float] = Field(default_factory=dict)
+    segmentos_sinteticos: list[str] = Field(default_factory=list)
+    renda_percentil: float = 0.0
+    #: Todos os braços elegíveis, independente do recorte de `top`.
+    ofertas_elegiveis: list[str] = Field(default_factory=list)
+    atributos_excluidos: list[str] = Field(default_factory=list)
+    atributos_monitorados: list[str] = Field(default_factory=list)
+
+
 class RankResponse(BaseModel):
     algorithm: str
     policy_id: str
     ranked: list[RankedOffer]
+    audit: AuditContext
 
 
 class UpdateRequest(BaseModel):

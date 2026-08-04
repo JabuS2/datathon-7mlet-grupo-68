@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 
-from models.base import BanditContext, BanditModel, RankedArm
+from models.base import BanditContext, BanditModel, RankedArm, explore_or_exploit
 
 
 class LinUCB(BanditModel):
@@ -60,8 +60,17 @@ class LinUCB(BanditModel):
             if not eligible_mask[j] or j in exclude:
                 continue
             s, pred, bonus = self._score(j, x)
-            rows.append(RankedArm(j, s, pred, bonus))
+            rows.append(RankedArm(j, s, pred, bonus, self._reasons(j, pred, bonus)))
         return sorted(rows, key=lambda r: -r.score)
+
+    def _reasons(self, j: int, pred: float, bonus: float) -> list[str]:
+        """Cold-start do LinUCB é `b[j]` ainda zerado: nenhum reward foi aplicado ao braço.
+
+        (O estado do LinUCB não guarda contagem de pulls — `b` é o sinal disponível.)
+        """
+        if not self.b[j].any():
+            return ["policy:linucb", "cold_start"]
+        return ["policy:linucb", explore_or_exploit(bonus, pred)]
 
     def update(self, arm_index: int, reward: float, ctx: BanditContext) -> None:
         x = ctx.x
