@@ -73,17 +73,23 @@ class Cliente(Base):
     #: no bloco auditável; aqui garantimos que o valor não chega a sair do serviço.
     PROTECTED_ATTRIBUTES: tuple[str, ...] = ("sexo",)
 
+    #: Metadados de linha: não são features e não são serializáveis em JSON (datetime).
+    #: O contexto atravessa HTTP até o model_service, então mandá-los quebraria a chamada.
+    _AUDIT_COLUMNS: tuple[str, ...] = ("created_at", "updated_at", "created_by", "updated_by")
+
     def to_context(self) -> dict:
         """Projeção do cliente como dicionário de contexto para o bandit.
 
-        Sai daqui pela rede até o model_service, então os atributos protegidos são removidos
-        **na origem** — minimização de dado, não confiança no consumidor. O model_service
-        descarta de novo na entrada, e declara a exclusão em `audit.atributos_excluidos`.
+        Sai daqui pela rede até o model_service, então:
+        - atributos protegidos são removidos **na origem** — minimização de dado, não
+          confiança no consumidor (o model_service descarta de novo na entrada);
+        - metadados de linha ficam fora: não são features e `datetime` não é JSON.
         """
+        skip = set(self.PROTECTED_ATTRIBUTES) | set(self._AUDIT_COLUMNS)
         return {
             col.name: getattr(self, col.name)
             for col in self.__table__.columns
-            if col.name not in self.PROTECTED_ATTRIBUTES
+            if col.name not in skip
         }
 
     # --- 24 flags de posse de produto (base da recompensa) ---

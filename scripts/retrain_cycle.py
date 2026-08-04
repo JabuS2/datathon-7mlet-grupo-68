@@ -54,13 +54,13 @@ def main() -> int:
         if args.publish:
             path = f"/api/v1/monitoring/metrics/{args.policy}/publish"
             resp = client.post(
-                f"{api}{path}", headers=headers, params={"windowDays": args.window_days}
+                f"{api}{path}", headers=headers, params={"window_days": args.window_days}
             )
         else:
             resp = client.get(
                 f"{api}{path}",
                 headers=headers,
-                params={"policyVersion": args.policy, "windowDays": args.window_days},
+                params={"policy_version": args.policy, "window_days": args.window_days},
             )
         if resp.status_code != 200:
             print(f"ERRO ao apurar métricas: {resp.status_code} {resp.text}")
@@ -91,12 +91,15 @@ def main() -> int:
 
     print("\n-> ciclo aberto")
     print(json.dumps(cycle, indent=2, ensure_ascii=False))
-    if not cycle.get("registryVersion") and not cycle.get("registry_version"):
-        print("   aviso: sem registryVersion — o MLflow não respondeu; o ciclo foi aberto"
+    # O model_service responde em snake_case: usa pydantic puro, não o BaseSchema com alias
+    # camelCase do api_service. Os dois contratos convivem no mesmo fluxo — atenção ao ler.
+    run_id = cycle["run_id"]
+    if not cycle.get("registry_version"):
+        print("   aviso: sem registry_version — o MLflow não respondeu; o ciclo foi aberto"
               " mesmo assim (o gate humano não depende do registry).")
     print(f"\nPróximo passo (gate humano):\n"
           f"  POST {model}/api/v1/approvals?user_id=<id>\n"
-          f"       {{\"run_id\": \"{cycle['runId']}\", \"decision\": \"approve\"}}")
+          f"       {{\"run_id\": \"{run_id}\", \"decision\": \"approve\"}}")
     return 0
 
 

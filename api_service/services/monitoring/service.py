@@ -27,6 +27,15 @@ logger = logging.getLogger(__name__)
 DEFAULT_WINDOW_DAYS = 14
 
 
+def _utc_naive() -> datetime:
+    """Agora em UTC, **sem** tzinfo.
+
+    `Base.created_at` é `TIMESTAMP WITHOUT TIME ZONE`; comparar com um datetime aware faz o
+    asyncpg recusar o parâmetro ("can't subtract offset-naive and offset-aware datetimes").
+    """
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class MonitoringService:
     def __init__(self, uow: UnitOfWork, model_client: ModelServiceClient | None = None):
         self.uow = uow
@@ -35,7 +44,7 @@ class MonitoringService:
     async def compute(
         self, policy_version: str | None = None, window_days: int = DEFAULT_WINDOW_DAYS
     ) -> dict[str, list[Metric] | str | int]:
-        now = datetime.now(UTC)
+        now = _utc_naive()
         start = now - timedelta(days=window_days)
         middle = now - timedelta(days=window_days / 2)
 
@@ -86,6 +95,6 @@ class MonitoringService:
 
     async def active_policy_versions(self, window_days: int = DEFAULT_WINDOW_DAYS) -> list[str]:
         """Políticas que produziram decisões no período — o que vale a pena apurar."""
-        since = datetime.now(UTC) - timedelta(days=window_days)
+        since = _utc_naive() - timedelta(days=window_days)
         async with self.uow:
             return await self.uow.decisoes.policy_versions_since(since)

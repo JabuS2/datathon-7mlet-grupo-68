@@ -43,12 +43,12 @@ Falhas:
 
 Falhas:
 
-- `TYP-100870` (`typical`) — topo=OFF-INV-001, baseline diria OFF-CR-001
-- `TYP-1186912` (`typical`) — topo=OFF-INV-003, baseline diria OFF-CR-001
-- `TYP-952537` (`typical`) — topo=OFF-CR-002, baseline diria OFF-CR-001
-- `TYP-904395` (`typical`) — topo=OFF-CR-002, baseline diria OFF-CR-001
+- `TYP-100870` (`typical`) — topo=OFF-INV-004, baseline diria OFF-CR-001
+- `TYP-1186912` (`typical`) — topo=OFF-CR-002, baseline diria OFF-CR-001
+- `TYP-952537` (`typical`) — topo=OFF-CR-003, baseline diria OFF-CR-001
+- `TYP-904395` (`typical`) — topo=OFF-SEG-003, baseline diria OFF-CR-001
 - `TYP-366424` (`typical`) — topo=OFF-INV-004, baseline diria OFF-CR-001
-- `TYP-495572` (`typical`) — topo=OFF-SEG-003, baseline diria OFF-INV-001
+- `TYP-1464387` (`typical`) — topo=OFF-INV-001, baseline diria OFF-CR-002
 
 ## `baseline`
 

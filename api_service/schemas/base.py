@@ -3,8 +3,6 @@ from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict
 
-from utils.fake_factory import FakeFactory
-
 
 def to_camel(string: str) -> str:
     words = string.split("_")
@@ -22,6 +20,15 @@ class BaseSchema(BaseModel):
 
     @classmethod
     def fake(cls, **kwargs: Any) -> Self:
+        """Instância sintética para testes.
+
+        O import de `FakeFactory` é **local de propósito**: ele puxa `polyfactory`, que é
+        dependência do grupo `test`. A imagem de produção instala só `--only main`, então um
+        import no topo deste módulo derrubava o container inteiro no boot — `BaseSchema` é
+        carregado por todo schema, e portanto por toda rota.
+        """
+        from utils.fake_factory import FakeFactory
+
         return FakeFactory.model(cls, **kwargs)
 
     @classmethod

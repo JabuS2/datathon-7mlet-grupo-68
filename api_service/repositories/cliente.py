@@ -41,8 +41,14 @@ class ClienteRepository(BaseRepository[Cliente]):
     ) -> Cliente | None:
         """Sorteia uma linha real do seed que case (mesmo segmento, idade próxima) — método
         template do §6: preserva as correlações reais entre produtos. Faz fallback sem segmento.
+
+        Só clientes **ativos**: quase todo braço do catálogo exige `ind_ativo=1`, então um
+        template inativo produz zero ofertas elegíveis e o visitante cai numa vitrine vazia
+        no primeiro acesso. Foi o que aconteceu no smoke test da stack.
         """
-        base = select(Cliente).where(Cliente.origem == OrigemCliente.SEED)
+        base = select(Cliente).where(
+            Cliente.origem == OrigemCliente.SEED, Cliente.ind_ativo.is_(True)
+        )
         order = func.abs(Cliente.idade - idade)
         if segmento:
             row: Cliente | None = await self.session.scalar(

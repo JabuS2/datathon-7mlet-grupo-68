@@ -24,6 +24,9 @@ services:
       BACKEND_CORS_ORIGINS: '["http://localhost:4200","http://localhost:3000"]'
       # Seed the DB (admin + fake users) on startup; set to "false" to skip
       SEED_DB: ${SEED_DB:-true}
+      # O default de settings.py resolve <pacote>/../data, que no container vira /data —
+      # mas o volume monta em /app/data. Sem isto o seed do golden set não acha o catálogo.
+      DATA_DIR: /app/data
       MODEL_SERVICE_URL: http://model:8000
       # Datadog (tracing desligado por default; ligue com DD_TRACE_ENABLED=true no .env)
       DD_TRACE_ENABLED: ${DD_TRACE_ENABLED:-false}
