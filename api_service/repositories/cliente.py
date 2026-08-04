@@ -41,8 +41,14 @@ class ClienteRepository(BaseRepository[Cliente]):
     ) -> Cliente | None:
         """Sorteia uma linha real do seed que case (mesmo segmento, idade próxima) — método
         template do §6: preserva as correlações reais entre produtos. Faz fallback sem segmento.
+
+        Só clientes **ativos**: quase todo braço do catálogo exige `ind_ativo=1`, então um
+        template inativo produz zero ofertas elegíveis e o visitante cai numa vitrine vazia
+        no primeiro acesso. Foi o que aconteceu no smoke test da stack.
         """
-        base = select(Cliente).where(Cliente.origem == OrigemCliente.SEED)
+        base = select(Cliente).where(
+            Cliente.origem == OrigemCliente.SEED, Cliente.ind_ativo.is_(True)
+        )
         order = func.abs(Cliente.idade - idade)
         if segmento:
             row: Cliente | None = await self.session.scalar(
@@ -63,3 +69,26 @@ class ClienteRepository(BaseRepository[Cliente]):
         stmt = stmt.order_by(Cliente.cod_cliente.desc()).limit(1)
         result: int | None = await self.session.scalar(stmt)
         return result
+
+    async def renda_percentil(self, valor: float | None) -> float:
+        """Percentil (0–100) da renda na base de clientes.
+
+        As regras de segmento sintético comparam contra a distribuição da população, não
+        contra um limiar fixo. Calculado em SQL sobre `clientes` — a mesma base que gerou o
+        golden set — em vez de recarregar o CSV a cada onboarding.
+        """
+        if valor is None:
+            return 50.0
+        total = await self.session.scalar(
+            select(func.count())
+            .select_from(Cliente)
+            .where(Cliente.renda_estimada_anual_brl.isnot(None))
+        )
+        if not total:
+            return 50.0
+        abaixo = await self.session.scalar(
+            select(func.count())
+            .select_from(Cliente)
+            .where(Cliente.renda_estimada_anual_brl <= valor)
+        )
+        return float(abaixo or 0) / float(total) * 100.0

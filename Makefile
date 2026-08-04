@@ -1,5 +1,5 @@
 .PHONY: install infra migrate seed reproduce api test lint down run start-project \
-        data data-processed data-synthetic data-golden notebooks
+        data data-processed data-synthetic data-golden data-eval notebooks evaluate
 
 API_DIR = api_service
 
@@ -59,8 +59,17 @@ data-synthetic:
 data-golden:
 	python scripts/generate_golden_sample.py
 
+# golden_set -> evaluation_cases.jsonl (casos de avaliação offline; versionado)
+data-eval:
+	python scripts/generate_evaluation_cases.py
+
 # A cadeia inteira (assume o download do Kaggle já feito).
-data: data-processed data-synthetic data-golden
+data: data-processed data-synthetic data-golden data-eval
+
+# Avaliação offline contra o golden set. Não precisa de Docker nem de serviço no ar;
+# escreve reports/evaluation-report.md e sai != 0 se uma propriedade bloqueante falhar.
+evaluate:
+	python scripts/run_evaluation.py
 
 # Executa os notebooks de análise ponta a ponta, descartando a saída (mesmo
 # smoke test do job `notebooks` no CI).

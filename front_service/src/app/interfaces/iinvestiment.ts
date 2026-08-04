@@ -22,6 +22,9 @@ export interface RecommendationItem {
   valorTotal?: number;
   descontoPct?: number;
   valorFinal?: number;
+
+  /** Já está na carteira — o card aparece, mas não convida a clicar de novo. */
+  jaAdquirida: boolean;
 }
 
 export enum ProductCategory {

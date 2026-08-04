@@ -35,6 +35,7 @@ describe('Investiment', () => {
         valorTotal: 1000,
         descontoPct: 5,
         valorFinal: 950,
+        jaAdquirida: false,
       },
     ];
 
@@ -50,5 +51,13 @@ describe('Investiment', () => {
 
   afterEach(() => {
     httpMock.verify();
+  });
+
+  it('lê a carteira (interests)', () => {
+    service.interests().subscribe();
+
+    const req = httpMock.expectOne('http://localhost:8001/api/v1/interests');
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
   });
 });

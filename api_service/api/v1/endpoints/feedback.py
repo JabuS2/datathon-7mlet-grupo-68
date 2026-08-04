@@ -1,15 +1,19 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 
-from core.auth_dependencies import AuthDependencies
+from core.auth_dependencies import get_current_user
 from db.dependencies import get_uow
 from db.unit_of_work import UnitOfWork
+from models.user import User
 from schemas.feedback import FeedbackCreate, FeedbackResponse
 from services.model_client import ModelServiceClient
 from services.offer.offer import OfferService
 
 router = APIRouter()
-auth = AuthDependencies()
 model_client = ModelServiceClient()
+
+CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 @router.post(
@@ -20,8 +24,8 @@ model_client = ModelServiceClient()
 )
 async def post_feedback(
     data: FeedbackCreate,
-    current_user=Depends(auth.get_current_user),
+    user: CurrentUser,
     uow: UnitOfWork = Depends(get_uow),
 ):
     service = OfferService(uow=uow, model_client=model_client)
-    return await service.submit_feedback(current_user.id, data)
+    return await service.submit_feedback(user, data)

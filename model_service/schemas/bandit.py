@@ -9,6 +9,13 @@ class RankRequest(BaseModel):
     algorithm: str | None = Field(
         default=None, description="linucb | thompson | baseline (default do serviço)"
     )
+    policy_id: str | None = Field(
+        default=None,
+        description=(
+            "Política a servir. Omitido: usa a `active`; sem nenhuma política registrada, "
+            "cai na política implícita `auto-{algorithm}`."
+        ),
+    )
     client: dict[str, Any] = Field(
         description="Features do cliente (idade, renda_estimada_anual_brl, flags possui_*, etc.)"
     )
@@ -23,6 +30,8 @@ class RankedOffer(BaseModel):
     score: float
     pred: float
     bonus: float
+    #: Justificativa da posição (`policy:linucb`, `explore`/`exploit`, `cold_start`, ...).
+    reason_codes: list[str] = Field(default_factory=list)
     category: str
     product_name: str
     description: str
@@ -31,13 +40,30 @@ class RankedOffer(BaseModel):
     valor_final: float | None = None
 
 
+class AuditContext(BaseModel):
+    """O que entrou na decisão — vai para `Decisao.context` no api_service (Etapa 5/LGPD)."""
+
+    features_numericas: dict[str, float] = Field(default_factory=dict)
+    segmentos_sinteticos: list[str] = Field(default_factory=list)
+    renda_percentil: float = 0.0
+    #: Todos os braços elegíveis, independente do recorte de `top`.
+    ofertas_elegiveis: list[str] = Field(default_factory=list)
+    atributos_excluidos: list[str] = Field(default_factory=list)
+    atributos_monitorados: list[str] = Field(default_factory=list)
+
+
 class RankResponse(BaseModel):
     algorithm: str
+    policy_id: str
     ranked: list[RankedOffer]
+    audit: AuditContext
 
 
 class UpdateRequest(BaseModel):
     algorithm: str | None = None
+    policy_id: str | None = Field(
+        default=None, description="Mesma resolução do /rank — omitido usa a política `active`."
+    )
     arm_id: str
     reward: float = Field(description="Reward = click (0 ou 1)")
     client: dict[str, Any] = Field(default_factory=dict)
@@ -46,5 +72,6 @@ class UpdateRequest(BaseModel):
 
 class UpdateResponse(BaseModel):
     algorithm: str
+    policy_id: str
     arm_id: str
     status: str

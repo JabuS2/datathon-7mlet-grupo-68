@@ -8,7 +8,6 @@ from uuid import uuid4
 
 import pytest
 
-from schemas.avaliacao import CasoAvaliacaoResponse
 from schemas.cliente import ClienteResponse, OnboardingRequest
 from schemas.decisao import (
     DecideRequest,
@@ -18,15 +17,7 @@ from schemas.decisao import (
     RewardResponse,
     ShowcaseResponse,
 )
-from schemas.experimento import ExperimentoResponse
-from schemas.governanca import (
-    AprovacaoHumanaResponse,
-    CicloRetreinoResponse,
-    MetricaResponse,
-    RegraAdequacaoResponse,
-)
 from schemas.oferta import OfertaResponse
-from schemas.politica import EstadoBracoResponse, PoliticaResponse
 from schemas.segmento import SegmentoResponse
 
 _NOW = datetime.now(UTC)
@@ -158,91 +149,6 @@ CONTRACTS = [
         },
     ),
     (SegmentoResponse, {"segment_id": "SEG-VIP", "description": "vip", "filters": {}}),
-    (
-        PoliticaResponse,
-        {
-            "policy_id": "linucb-v1",
-            "version": "1.0",
-            "algorithm": "linucb",
-            "hyperparams": {"alpha": 0.2},
-            "status": "active",
-            "created_at": _NOW,
-        },
-    ),
-    (
-        EstadoBracoResponse,
-        {
-            "policy_id": "linucb-v1",
-            "arm_id": "OFF-CR-001",
-            "alpha": 1.0,
-            "beta": 1.0,
-            "n_pulls": 5,
-            "sum_reward": 2.0,
-            "updated_at": _NOW,
-        },
-    ),
-    (
-        ExperimentoResponse,
-        {
-            "experiment_id": "exp-1",
-            "policy_ids": ["linucb-v1"],
-            "hypothesis": "h",
-            "metrics": {"regret": 0.1},
-            "status": "running",
-        },
-    ),
-    (
-        MetricaResponse,
-        {
-            "snapshot_id": uuid4(),
-            "policy_id": "linucb-v1",
-            "metric": "regret",
-            "value": 0.1,
-            "alert": False,
-            "captured_at": _NOW,
-        },
-    ),
-    (
-        RegraAdequacaoResponse,
-        {
-            "rule_id": "R1",
-            "arm_id": "OFF-CR-003",
-            "condition": {"idade_max": 24},
-            "action": "block",
-        },
-    ),
-    (
-        CicloRetreinoResponse,
-        {
-            "run_id": "run-1",
-            "policy_id": "linucb-v2",
-            "status": "candidate",
-            "metrics": {},
-        },
-    ),
-    (
-        AprovacaoHumanaResponse,
-        {
-            "gate_id": uuid4(),
-            "run_id": "run-1",
-            "user_id": 1,
-            "decision": "approve",
-            "note": "ok",
-            "decided_at": _NOW,
-        },
-    ),
-    (
-        CasoAvaliacaoResponse,
-        {
-            "case_id": "C1",
-            "context": {"idade": 70},
-            "expected_arm": "OFF-SEG-001",
-            "expected_reward": 1.0,
-            "rationale": "r",
-            "pass_fail_criteria": "arm==expected",
-            "type": "edge",
-        },
-    ),
 ]
 
 

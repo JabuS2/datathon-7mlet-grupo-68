@@ -12,12 +12,15 @@ from pathlib import Path
 
 import pytest
 
-fakeredis = pytest.importorskip("fakeredis", reason="fakeredis[lua] não instalado")
+pytest.importorskip("fakeredis", reason="fakeredis[lua] não instalado")
 import fakeredis.aioredis  # noqa: E402
 
 from catalog import Catalog  # noqa: E402
 from service import BanditService  # noqa: E402
+from service.policy_resolver import auto_policy  # noqa: E402
 from store import StateStore  # noqa: E402
+
+AUTO_LINUCB = auto_policy("linucb").policy_id
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 CATALOG = str(_REPO_ROOT / "data" / "golden_set" / "offer_catalog.json")
@@ -52,7 +55,7 @@ def service():
 
 async def test_state_and_context_persist_through_real_store(service):
     before = await service.rank("linucb", CLIENT, SEGMENTS)
-    assert await service.store.load_state("linucb") is not None
+    assert await service.store.load_state(AUTO_LINUCB) is not None
     ctx = await service.store.load_context()
     assert ctx and "mu" in ctx and "sd" in ctx
     assert before["ranked"]
@@ -72,7 +75,7 @@ async def test_concurrent_updates_learn_through_real_lock(service):
     pred_after = next(r["pred"] for r in after["ranked"] if r["arm_id"] == target)
     assert pred_after > pred_before
 
-    state = await service.store.load_state("linucb")
+    state = await service.store.load_state(AUTO_LINUCB)
     idx = service.catalog.index_of(target)
     b_norm = sum(v * v for v in state["b"][idx]) ** 0.5
     assert b_norm > 0

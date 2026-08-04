@@ -9,6 +9,10 @@ import pytest
 
 from catalog import Catalog
 from service import BanditService
+from service.policy_resolver import auto_policy
+from store import StateStore
+
+AUTO_LINUCB = auto_policy("linucb").policy_id
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 CATALOG = str(_REPO_ROOT / "data" / "golden_set" / "offer_catalog.json")
@@ -19,22 +23,26 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-class FakeStore:
-    """Store em memória com a mesma interface do StateStore (inclui lock por modelo)."""
+class FakeStore(StateStore):
+    """Store em memória com a mesma interface do StateStore (inclui lock por política).
+
+    Herda de `StateStore` e sobrescreve tudo — nada aqui toca no Redis, e herdar mantém o
+    tipo que o `BanditService` declara sem afrouxar a assinatura para um Protocol.
+    """
 
     def __init__(self):
         self._states: dict[str, dict] = {}
         self._context: dict | None = None
         self._locks: dict[str, asyncio.Lock] = {}
 
-    async def load_state(self, algorithm):
-        return self._states.get(algorithm)
+    async def load_state(self, policy_id):
+        return self._states.get(policy_id)
 
-    async def save_state(self, algorithm, state):
-        self._states[algorithm] = state
+    async def save_state(self, policy_id, state):
+        self._states[policy_id] = state
 
-    async def delete_state(self, algorithm):
-        self._states.pop(algorithm, None)
+    async def delete_state(self, policy_id):
+        self._states.pop(policy_id, None)
 
     async def load_context(self):
         return self._context
@@ -42,8 +50,8 @@ class FakeStore:
     async def save_context(self, state):
         self._context = state
 
-    def lock(self, algorithm, **_):
-        return self._locks.setdefault(algorithm, asyncio.Lock())
+    def lock(self, policy_id: str, timeout: int = 10, blocking_timeout: int = 10):
+        return self._locks.setdefault(policy_id, asyncio.Lock())
 
 
 @pytest.fixture
@@ -104,7 +112,8 @@ async def test_concurrent_updates_are_serialized(service, client):
     await asyncio.gather(
         *[service.update("linucb", target, 1.0, client, segments) for _ in range(25)]
     )
-    state = await service.store.load_state("linucb")
+    # sem governança configurada o resolver usa a política implícita do algoritmo
+    state = await service.store.load_state(AUTO_LINUCB)
     idx = service.catalog.index_of(target)
     # b[idx] = Σ reward*x; com 25 updates deve ser claramente não-nulo
     b_norm = sum(v * v for v in state["b"][idx]) ** 0.5

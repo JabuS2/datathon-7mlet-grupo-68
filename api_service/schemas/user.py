@@ -18,6 +18,8 @@ class UserLogin(UserBase):
 class UserResponse(BaseSchema):
     """Conta do usuário logado. `cod_cliente`/`saldo_ficticio` existem só p/ `tipo='demo'`."""
 
+    #: Necessário para o approval gate do model_service, que recebe quem aprovou.
+    id: int | None = None
     email: str
     tipo: TipoUsuario | None = None
     is_admin: bool | None = None

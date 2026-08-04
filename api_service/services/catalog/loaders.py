@@ -10,10 +10,16 @@ import csv
 import json
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 from models.cliente import PRODUCT_FLAGS
 
 # ─────────────────────────── catálogo de ofertas ───────────────────────────
+
+
+def _optional_float(value: Any) -> float | None:
+    """Campo de preço do catálogo — ausente em braços não precificados."""
+    return float(value) if value is not None else None
 
 
 def load_offer_catalog(path: str | Path) -> list[dict]:
@@ -33,6 +39,9 @@ def load_offer_catalog(path: str | Path) -> list[dict]:
                 "description": off["description"],
                 "category": off["category"],
                 "expected_revenue_brl": float(off["expected_revenue_brl"]),
+                "valor_total": _optional_float(off.get("valor_total")),
+                "desconto_pct": _optional_float(off.get("desconto_pct")),
+                "valor_final": _optional_float(off.get("valor_final")),
                 "context_features": off.get("context_features", []),
                 "eligible_segment": off.get("eligible_segment", {}),
                 "ucb_exploration_factor": float(
@@ -86,29 +95,6 @@ def iter_seed_clients(path: str | Path, limit: int | None = None) -> Iterator[di
 # ─────────────────────────── golden set (avaliação) ───────────────────────────
 
 
-def load_evaluation_cases(path: str | Path) -> list[dict]:
-    """Lê `evaluation_cases.jsonl` (tolerante: [] se o arquivo ainda não existir)."""
-    p = Path(path)
-    if not p.exists():
-        return []
-    cases: list[dict] = []
-    for line in p.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        raw = json.loads(line)
-        cases.append(
-            {
-                "case_id": raw["case_id"],
-                "context": raw.get("context", {}),
-                "expected_arm": raw["expected_arm"],
-                "expected_reward": raw.get("expected_reward"),
-                "rationale": raw.get("rationale"),
-                "pass_fail_criteria": raw.get("pass_fail_criteria"),
-                "type": raw.get("type", "typical"),
-            }
-        )
-    return cases
 
 
 # ─────────────────────────── helpers ───────────────────────────

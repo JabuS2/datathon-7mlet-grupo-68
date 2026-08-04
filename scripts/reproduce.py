@@ -1,15 +1,23 @@
 """Reprodução ponta a ponta do pipeline em ambiente local (Etapa 5 do PDF).
 
-Comando único que, com o Postgres no ar (`docker-compose up -d postgres`), executa:
+Comando único que executa:
   1. migrações Alembic (`upgrade head`)
-  2. seed do catálogo, políticas, priors e um subset de clientes
+  2. seed do catálogo, segmentos e um subset de clientes
   3. um ciclo de decisão auditável: decide -> clique -> reward (aprendizado)
 
 Imprime o braço escolhido, a justificativa (reason codes), a versão da política e o registro
 auditável — exatamente a evidência que a banca precisa ver.
 
+**Pré-requisitos** (o bandit não roda mais em processo):
+  docker-compose --profile api up -d postgres redis model
+  python scripts/seed_policies.py          # registra as políticas no model_service
+
+O ranking vem do model_service via HTTP; o que fica aqui é o log auditável
+(`decisao`/`evento_impressao`/`recompensa`). Sem o model_service no ar, o passo 3 falha
+com MODEL_SERVICE_UNAVAILABLE.
+
 Uso (da raiz do repo):  python scripts/reproduce.py
-Env: POSTGRES_* (conexão) e DATA_DIR (default <repo>/data).
+Env: POSTGRES_* (conexão), MODEL_SERVICE_URL e DATA_DIR (default <repo>/data).
 """
 
 from __future__ import annotations

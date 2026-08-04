@@ -1,16 +1,22 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query
 
-from core.auth_dependencies import AuthDependencies
+from core.auth_dependencies import get_current_user
 from db.dependencies import get_uow
 from db.unit_of_work import UnitOfWork
+from models.user import User
+from schemas.cliente import ClienteResponse
+from schemas.interesse import InteresseResponse
 from schemas.offer import OfferResponse
-from schemas.profile import ProfileResponse, ProfileUpsert
+from schemas.profile import ProfileUpdate
 from services.model_client import ModelServiceClient
 from services.offer.offer import OfferService
 
 router = APIRouter()
-auth = AuthDependencies()
 model_client = ModelServiceClient()
+
+CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 @router.get(
@@ -20,29 +26,35 @@ model_client = ModelServiceClient()
     response_model_exclude_none=True,
 )
 async def list_offers(
+    user: CurrentUser,
     algorithm: str | None = Query(default=None),
     top: int | None = Query(default=None, ge=1),
-    current_user=Depends(auth.get_current_user),
     uow: UnitOfWork = Depends(get_uow),
 ):
+    """Vitrine ranqueada pelo model_service a partir do contexto do cliente logado.
+
+    `409 NO_CLIENT_PROFILE` se a conta não tem cliente vinculado (contas de operador).
+    """
     service = OfferService(uow=uow, model_client=model_client)
-    return await service.list_offers(current_user.id, algorithm, top)
+    return await service.list_offers(user, algorithm, top)
 
 
-@router.get("/profile", tags=["offers"], response_model=ProfileResponse)
-async def get_profile(
-    current_user=Depends(auth.get_current_user),
+@router.get("/interests", tags=["offers"], response_model=list[InteresseResponse])
+async def list_interests(
+    user: CurrentUser,
     uow: UnitOfWork = Depends(get_uow),
 ):
+    """Carteira: as ofertas em que o usuário clicou, mais recentes primeiro."""
     service = OfferService(uow=uow, model_client=model_client)
-    return await service.get_profile(current_user.id)
+    return await service.list_interests(user)
 
 
-@router.put("/profile", tags=["offers"], response_model=ProfileResponse)
+@router.put("/profile", tags=["offers"], response_model=ClienteResponse)
 async def put_profile(
-    data: ProfileUpsert,
-    current_user=Depends(auth.get_current_user),
+    data: ProfileUpdate,
+    user: CurrentUser,
     uow: UnitOfWork = Depends(get_uow),
 ):
+    """Atualização parcial do contexto do próprio cliente. Leitura: `GET /me/profile`."""
     service = OfferService(uow=uow, model_client=model_client)
-    return await service.upsert_profile(current_user.id, data)
+    return await service.update_profile(user, data)

@@ -7,7 +7,11 @@
       <p class="uppercase text-xs tracking-wider text-gray-500">Saldo Total</p>
 
       <div class="flex flex-wrap items-end gap-4 mt-4">
-        <h2 class="text-5xl font-bold">R$ {{ profile.saldoFicticio | number: '1.2-2' }}</h2>
+        <!-- `?? 0`: perfis criados antes de o saldo passar a ser preenchido têm null,
+             e o pipe renderizaria "R$" sem valor nenhum -->
+        <h2 class="text-5xl font-bold">
+          R$ {{ (profile.saldoFicticio ?? 0) | number: '1.2-2' }}
+        </h2>
       </div>
     </div>
 

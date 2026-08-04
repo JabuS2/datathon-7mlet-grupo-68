@@ -1,4 +1,9 @@
-"""E8 — onboarding da vitrine (§6): cadastro → perfil sintético demo → recomendação ao vivo."""
+"""E8 — onboarding da vitrine (§6): cadastro → perfil sintético demo → recomendação ao vivo.
+
+`/decide` deixou de rodar o bandit em processo: ele chama `/rank` no model_service. Por isso
+o teste da recomendação usa `mock_model_service` — sem ele a rota devolve 500
+MODEL_SERVICE_UNAVAILABLE, que é exatamente como este teste quebrou no CI.
+"""
 
 import pytest
 import pytest_asyncio
@@ -15,7 +20,7 @@ async def seeded(session_factory):
 
 
 @pytest.mark.asyncio
-async def test_onboarding_creates_demo_profile_and_decides(client, seeded):
+async def test_onboarding_creates_demo_profile_and_decides(client, mock_model_service, seeded):
     payload = {
         "email": "visitante@demo.com",
         "password": "segredo123",

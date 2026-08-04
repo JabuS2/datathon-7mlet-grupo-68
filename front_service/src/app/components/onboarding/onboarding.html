@@ -1,0 +1,150 @@
+<main class="min-h-screen bg-[#f9f9f9] text-[#1b1b1b] flex items-center justify-center p-5">
+  <section
+    class="w-full max-w-[560px] bg-white border border-[#eeeeee] rounded-lg p-8 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
+  >
+    <div class="mb-8 text-center">
+      <h1 class="text-3xl font-semibold text-black mb-2">Vamos te conhecer</h1>
+
+      <p class="text-base text-[#5e5e5e]">
+        Cinco perguntas rápidas para personalizar suas ofertas. Sua conta já está criada —
+        agora é só nos contar um pouco sobre você.
+      </p>
+    </div>
+
+    <form (submit)="onSubmit($event)" class="space-y-6">
+      <!-- ── perfil ───────────────────────────────────────── -->
+      <div>
+        <label for="idade" class="block mb-2 text-sm font-medium">Qual a sua idade?</label>
+
+        <input
+          id="idade"
+          class="w-full p-3 border border-[#dddddd] rounded-md bg-white text-base transition focus:outline-none focus:border-black focus:border-[1.5px]"
+          [formField]="onboardingForm.idade"
+          type="number"
+        />
+
+        @if (onboardingForm.idade().touched() && onboardingForm.idade().invalid()) {
+          <ul class="text-[#ff003d] text-sm mt-1">
+            @for (error of onboardingForm.idade().errors(); track error) {
+              <li>{{ error.message }}</li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div>
+        <label for="segmento" class="block mb-2 text-sm font-medium">
+          Como você se descreveria hoje?
+        </label>
+
+        <select
+          id="segmento"
+          class="w-full p-3 border border-[#dddddd] rounded-md bg-white text-base focus:outline-none focus:border-black focus:border-[1.5px]"
+          (change)="setSegmento($any($event.target).value)"
+        >
+          @for (opcao of segmentos; track opcao.value) {
+            <option [value]="opcao.value" [selected]="opcao.value === model().segmento">
+              {{ opcao.label }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label for="renda" class="block mb-2 text-sm font-medium">
+          Qual sua renda mensal aproximada?
+        </label>
+
+        <select
+          id="renda"
+          class="w-full p-3 border border-[#dddddd] rounded-md bg-white text-base focus:outline-none focus:border-black focus:border-[1.5px]"
+          (change)="setRenda($any($event.target).value)"
+        >
+          @for (faixa of faixasRenda; track faixa.valor) {
+            <option [value]="faixa.valor" [selected]="faixa.valor === model().rendaEstimadaAnualBrl">
+              {{ faixa.label }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label for="tempo" class="block mb-2 text-sm font-medium">
+          Há quanto tempo você tem conta em banco?
+        </label>
+
+        <select
+          id="tempo"
+          class="w-full p-3 border border-[#dddddd] rounded-md bg-white text-base focus:outline-none focus:border-black focus:border-[1.5px]"
+          (change)="setTempo($any($event.target).value)"
+        >
+          @for (faixa of faixasTempo; track faixa.meses) {
+            <option
+              [value]="faixa.meses"
+              [selected]="faixa.meses === model().tempoRelacionamentoMeses"
+            >
+              {{ faixa.label }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <!-- ── o que você já tem ────────────────────────────── -->
+      <fieldset>
+        <legend class="mb-3 text-sm font-medium">Assinale o que você já possui:</legend>
+
+        <div class="space-y-2">
+          <label
+            class="flex items-center gap-3 p-3 border border-[#dddddd] rounded-md cursor-pointer hover:bg-[#f9f9f9] transition"
+          >
+            <input
+              type="checkbox"
+              class="w-4 h-4 accent-black"
+              [checked]="model().possuiCartaoCredito"
+              (change)="toggle('possuiCartaoCredito')"
+            />
+            <span class="text-sm">Cartão de crédito</span>
+          </label>
+
+          <label
+            class="flex items-center gap-3 p-3 border border-[#dddddd] rounded-md cursor-pointer hover:bg-[#f9f9f9] transition"
+          >
+            <input
+              type="checkbox"
+              class="w-4 h-4 accent-black"
+              [checked]="model().possuiFundoInvestimento"
+              (change)="toggle('possuiFundoInvestimento')"
+            />
+            <span class="text-sm">Investimento em fundos</span>
+          </label>
+
+          <label
+            class="flex items-center gap-3 p-3 border border-[#dddddd] rounded-md cursor-pointer hover:bg-[#f9f9f9] transition"
+          >
+            <input
+              type="checkbox"
+              class="w-4 h-4 accent-black"
+              [checked]="model().possuiFinanciamentoImovel"
+              (change)="toggle('possuiFinanciamentoImovel')"
+            />
+            <span class="text-sm">Financiamento imobiliário</span>
+          </label>
+        </div>
+
+        <p class="mt-2 text-xs text-[#5e5e5e]">
+          O que você não assinalar nós estimamos a partir de perfis parecidos — por isso são
+          poucas perguntas.
+        </p>
+      </fieldset>
+
+      <button
+        type="submit"
+        [disabled]="onboardingForm().invalid()"
+        class="w-full cursor-pointer rounded-md bg-black py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-[#333] disabled:cursor-not-allowed disabled:bg-[#cccccc]"
+      >
+        Ver minhas ofertas
+      </button>
+    </form>
+
+  </section>
+</main>

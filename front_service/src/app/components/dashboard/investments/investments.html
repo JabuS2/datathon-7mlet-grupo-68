@@ -2,15 +2,21 @@
   <div class="flex items-center justify-between mb-6">
     <h2 class="text-xl font-semibold">Oportunidades para você</h2>
 
-    <span class="text-xs uppercase tracking-wider text-gray-400"> Arraste para ver mais </span>
+    <span class="text-xs uppercase tracking-wider text-gray-400">
+      Ranqueadas para você
+    </span>
   </div>
 
-  <div
-    class="flex gap-6 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-white/30 [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin]"
-  >
-    @for (opportunity of opportunities(); track opportunity.armId) {
+  <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+    @for (opportunity of visiveis(); track opportunity.armId) {
       <article
-        class="min-w-[288px] w-72 flex-shrink-0 snap-start rounded-xl border border-white/10 bg-white/10 p-5 flex flex-col justify-between"
+        class="rounded-xl border p-5 flex flex-col justify-between transition-all duration-300"
+        [class.border-white/10]="escolhido() !== opportunity.armId"
+        [class.bg-white/10]="escolhido() !== opportunity.armId"
+        [class.border-emerald-400]="escolhido() === opportunity.armId"
+        [class.bg-emerald-400/20]="escolhido() === opportunity.armId"
+        [class.scale-105]="escolhido() === opportunity.armId"
+        [class.opacity-60]="opportunity.jaAdquirida && escolhido() !== opportunity.armId"
       >
         <div>
           <div class="flex items-center gap-2 mb-3">
@@ -66,11 +72,43 @@
         <button
           type="button"
           (click)="knowMore(opportunity)"
-          class="mt-6 w-full cursor-pointer rounded-md bg-white py-2.5 text-sm font-semibold uppercase tracking-wide text-black transition hover:bg-gray-100"
+          [disabled]="enviando() !== null || opportunity.jaAdquirida"
+          class="mt-6 w-full cursor-pointer rounded-md bg-white py-2.5 text-sm font-semibold uppercase tracking-wide text-black transition hover:bg-gray-100 disabled:cursor-wait disabled:bg-white/40 disabled:text-white/60"
         >
-          Conhecer
+          @if (escolhido() === opportunity.armId) {
+            ✓ Adicionado à carteira
+          } @else if (opportunity.jaAdquirida) {
+            Já na sua carteira
+          } @else if (enviando() === opportunity.armId) {
+            Registrando…
+          } @else {
+            Tenho interesse
+          }
         </button>
       </article>
+    } @empty {
+      <!-- Vitrine vazia é estado esperado: produto adquirido sai do ranking, então quem
+           contratou tudo não tem mais o que ver. Sem esta mensagem parecia erro. -->
+      <p class="col-span-full py-6 text-sm text-gray-400">
+        Você já demonstrou interesse em todas as ofertas disponíveis para o seu perfil. Elas
+        estão na sua carteira, abaixo.
+      </p>
     }
   </div>
+
+  @if (ocultas() > 0) {
+    <div class="mt-6 text-center">
+      <button
+        type="button"
+        (click)="toggleExpandir()"
+        class="cursor-pointer rounded-md border border-white/20 px-6 py-2.5 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/10"
+      >
+        @if (expandido()) {
+          Ver menos
+        } @else {
+          Ver mais {{ ocultas() }} oferta{{ ocultas() > 1 ? 's' : '' }}
+        }
+      </button>
+    </div>
+  }
 </section>

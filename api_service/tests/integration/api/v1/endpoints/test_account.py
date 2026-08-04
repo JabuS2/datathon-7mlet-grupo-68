@@ -35,7 +35,7 @@ async def _operador_headers(client, email: str) -> dict:
 
 
 @pytest.mark.asyncio
-async def test_full_self_service_journey(client, seeded):
+async def test_full_self_service_journey(client, mock_model_service, seeded):
     session = await _onboard(client, "user@demo.com")
     h = session["headers"]
     cod = session["body"]["cliente"]["codCliente"]
@@ -72,7 +72,7 @@ async def test_full_self_service_journey(client, seeded):
 
 
 @pytest.mark.asyncio
-async def test_cannot_touch_other_users_decision(client, seeded):
+async def test_cannot_touch_other_users_decision(client, mock_model_service, seeded):
     a = await _onboard(client, "a@demo.com")
     b = await _onboard(client, "b@demo.com")
 
@@ -88,12 +88,14 @@ async def test_cannot_touch_other_users_decision(client, seeded):
 
 
 @pytest.mark.asyncio
-async def test_me_requires_auth(client, seeded):
+async def test_me_requires_auth(client, mock_model_service, seeded):
     assert (await client.get("/me/profile")).status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_clickable_showcase_attributes_click_to_chosen_offer(client, seeded):
+async def test_clickable_showcase_attributes_click_to_chosen_offer(
+    client, mock_model_service, seeded
+):
     """Vitrine clicável: o usuário escolhe da lista e o clique é atribuído àquela oferta."""
     h = (await _onboard(client, "clicador@demo.com"))["headers"]
 
@@ -122,7 +124,7 @@ async def test_clickable_showcase_attributes_click_to_chosen_offer(client, seede
 
 
 @pytest.mark.asyncio
-async def test_decide_without_body_still_lets_policy_choose(client, seeded):
+async def test_decide_without_body_still_lets_policy_choose(client, mock_model_service, seeded):
     """Regressão: o corpo é opcional — quem já chamava sem body não pode quebrar."""
     h = (await _onboard(client, "semcorpo@demo.com"))["headers"]
 
@@ -132,7 +134,7 @@ async def test_decide_without_body_still_lets_policy_choose(client, seeded):
 
 
 @pytest.mark.asyncio
-async def test_decide_rejects_ineligible_arm(client, seeded):
+async def test_decide_rejects_ineligible_arm(client, mock_model_service, seeded):
     """Escolher da lista não vira brecha: braço fora do conjunto elegível é barrado."""
     h = (await _onboard(client, "espertinho@demo.com"))["headers"]
 
@@ -151,7 +153,7 @@ async def test_decide_rejects_ineligible_arm(client, seeded):
 
 
 @pytest.mark.asyncio
-async def test_offers_catalog_is_blocked_for_demo(client, seeded):
+async def test_offers_catalog_is_blocked_for_demo(client, mock_model_service, seeded):
     """O catálogo interno do bandit continua barrado para o cliente demo.
 
     Regressão: `/offers` servia `OfertaResponse` a qualquer autenticado, entregando ao próprio
@@ -167,7 +169,7 @@ async def test_offers_catalog_is_blocked_for_demo(client, seeded):
 
 
 @pytest.mark.asyncio
-async def test_offers_catalog_exposes_internals_to_operador(client, seeded):
+async def test_offers_catalog_exposes_internals_to_operador(client, mock_model_service, seeded):
     await client.post("/register", json={"email": "cat@demo.com", "password": "segredo123"})
     token = (
         await client.post("/login", json={"email": "cat@demo.com", "password": "segredo123"})
@@ -181,7 +183,7 @@ async def test_offers_catalog_exposes_internals_to_operador(client, seeded):
 
 
 @pytest.mark.asyncio
-async def test_operador_without_profile_gets_conflict(client, seeded):
+async def test_operador_without_profile_gets_conflict(client, mock_model_service, seeded):
     await client.post("/register", json={"email": "op@demo.com", "password": "segredo123"})
     token = (
         await client.post("/login", json={"email": "op@demo.com", "password": "segredo123"})

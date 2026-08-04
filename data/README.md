@@ -15,7 +15,14 @@ data/synthetic_enrichment/ clientes_br_sintetico.csv     ~196 MB, colunas em PT-
         ▼
 data/golden_set/           golden_clients.csv            2 595 linhas — VERSIONADO
                            offer_catalog.json            10 braços  — VERSIONADO
+        │  scripts/generate_evaluation_cases.py
+        ▼
+                           evaluation_cases.jsonl        24 casos   — VERSIONADO
 ```
+
+`evaluation_cases.jsonl` é ground truth de teste (avaliação offline, Etapa 4) e por isso
+fica no git como os irmãos do `golden_set/`: é pequeno, determinístico e o harness precisa
+dele num clone limpo. Regenerar: `make data-eval`. Rodar: `make evaluate`.
 
 ## O que é versionado e o que não é
 
@@ -43,6 +50,7 @@ unzip 'data/kaggle/*.zip' -d data/kaggle/
 make data-processed    # kaggle      -> processed
 make data-synthetic    # processed   -> synthetic_enrichment
 make data-golden       # synthetic   -> golden_set
+make data-eval         # golden_set  -> evaluation_cases.jsonl
 
 # ou tudo de uma vez (assume o passo 0 feito)
 make data

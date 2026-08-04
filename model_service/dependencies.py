@@ -1,16 +1,45 @@
 from __future__ import annotations
 
+import asyncio
+from collections.abc import AsyncIterator
 from functools import lru_cache
 
 from redis.asyncio import Redis, from_url
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from catalog import Catalog
+from db.session import db
+from db.unit_of_work import UnitOfWork
+from governance import GovernanceService
 from registry import ModelRegistry
 from service import BanditService
 from settings import settings
 from store import StateStore
 
 _redis: Redis | None = None
+
+
+async def get_session() -> AsyncIterator[AsyncSession]:
+    async for session in db.session():
+        yield session
+
+
+async def get_uow() -> AsyncIterator[UnitOfWork]:
+    """UnitOfWork por requisição — o `async with` de quem usa é que fecha a transação."""
+    async for session in db.session():
+        yield UnitOfWork(session)
+
+
+async def _snapshot_to_registry(policy) -> str | None:
+    """Versiona o estado da política no MLflow e devolve a versão registrada."""
+    state = await get_service().snapshot_state(policy.algorithm, policy=policy)
+    info = await asyncio.to_thread(get_registry().register_version, policy.policy_id, state)
+    return str(info.get("version")) if isinstance(info, dict) else None
+
+
+async def get_governance() -> AsyncIterator[GovernanceService]:
+    async for session in db.session():
+        yield GovernanceService(UnitOfWork(session), snapshot=_snapshot_to_registry)
 
 
 @lru_cache

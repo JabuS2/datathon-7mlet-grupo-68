@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 
-from models.base import BanditContext, BanditModel, RankedArm
+from models.base import BanditContext, BanditModel, RankedArm, explore_or_exploit
 
 
 class ThompsonSampling(BanditModel):
@@ -37,7 +37,11 @@ class ThompsonSampling(BanditModel):
                 continue
             mean = float(self.alpha[j] / (self.alpha[j] + self.beta[j]))
             sample = float(samples[j])
-            rows.append(RankedArm(j, sample, mean, sample - mean))
+            bonus = sample - mean
+            # prior Beta(1,1) intocado = nenhuma observação para este braço
+            cold = self.alpha[j] == 1.0 and self.beta[j] == 1.0
+            reasons = ["policy:thompson", "cold_start" if cold else explore_or_exploit(bonus, mean)]
+            rows.append(RankedArm(j, sample, mean, bonus, reasons))
         return sorted(rows, key=lambda r: -r.score)
 
     def update(self, arm_index: int, reward: float, ctx: BanditContext) -> None:

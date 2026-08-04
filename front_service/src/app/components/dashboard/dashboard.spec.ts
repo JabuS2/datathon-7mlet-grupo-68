@@ -58,6 +58,8 @@ describe('DashboardComponent', () => {
   };
 
   const investimentServiceMock = {
+    // a carteira lê daqui também (WalletComponent)
+    interests: vi.fn().mockReturnValue(of([])),
     recommendations: vi.fn().mockReturnValue(
       of([
         {
@@ -70,6 +72,7 @@ describe('DashboardComponent', () => {
           valorTotal: 1000,
           descontoPct: 5,
           valorFinal: 950,
+          jaAdquirida: false,
         },
       ]),
     ),
@@ -112,5 +115,24 @@ describe('DashboardComponent', () => {
     expect(textContent).toContain('Oportunidades para você');
     expect(textContent).toContain('Transações Recentes');
     expect(investimentServiceMock.recommendations).toHaveBeenCalledOnce();
+  });
+
+  it('atualiza o saldo exibido com o valor que o servidor devolveu', () => {
+    fixture.detectChanges();
+    const antes = component.profile()?.saldoFicticio;
+
+    component.aoRegistrarInteresse({ armId: 'ARM-001', saldo: 1234.5 });
+
+    expect(component.profile()?.saldoFicticio).toBe(1234.5);
+    expect(component.profile()?.saldoFicticio).not.toBe(antes);
+  });
+
+  it('ignora saldo nulo (conta sem saldo definido)', () => {
+    fixture.detectChanges();
+    const antes = component.profile()?.saldoFicticio;
+
+    component.aoRegistrarInteresse({ armId: 'ARM-001', saldo: null });
+
+    expect(component.profile()?.saldoFicticio).toBe(antes);
   });
 });
