@@ -13,13 +13,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from db.unit_of_work import UnitOfWork
-from models.caso_avaliacao import CasoAvaliacao
 from models.cliente import Cliente
 from models.oferta import Oferta
 from models.segmento import Segmento
 from services.catalog.loaders import (
     iter_seed_clients,
-    load_evaluation_cases,
     load_offer_catalog,
     load_segments_from_clients,
 )
@@ -45,9 +43,6 @@ async def seed_all(
             uow, load_segments_from_clients(golden / "golden_clients.csv")
         ),
         "clientes": await _seed_clients(uow, golden / "golden_clients.csv", client_limit),
-        "casos_avaliacao": await _seed_cases(
-            uow, load_evaluation_cases(golden / "evaluation_cases.jsonl")
-        ),
     }
 
 
@@ -83,10 +78,3 @@ async def _seed_clients(uow: UnitOfWork, csv_path: Path, limit: int | None) -> i
     return inserted
 
 
-async def _seed_cases(uow: UnitOfWork, cases: list[dict]) -> int:
-    inserted = 0
-    for kwargs in cases:
-        if await uow.casos_avaliacao.get_by_field(CasoAvaliacao.case_id, kwargs["case_id"]) is None:
-            uow.casos_avaliacao.add(CasoAvaliacao(**kwargs))
-            inserted += 1
-    return inserted

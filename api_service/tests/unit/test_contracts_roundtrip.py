@@ -8,8 +8,6 @@ from uuid import uuid4
 
 import pytest
 
-from schemas.adequacao import RegraAdequacaoResponse
-from schemas.avaliacao import CasoAvaliacaoResponse
 from schemas.cliente import ClienteResponse, OnboardingRequest
 from schemas.decisao import (
     DecideRequest,
@@ -19,7 +17,6 @@ from schemas.decisao import (
     RewardResponse,
     ShowcaseResponse,
 )
-from schemas.experimento import ExperimentoResponse
 from schemas.oferta import OfertaResponse
 from schemas.segmento import SegmentoResponse
 
@@ -152,37 +149,6 @@ CONTRACTS = [
         },
     ),
     (SegmentoResponse, {"segment_id": "SEG-VIP", "description": "vip", "filters": {}}),
-    (
-        ExperimentoResponse,
-        {
-            "experiment_id": "exp-1",
-            "policy_ids": ["linucb-v1"],
-            "hypothesis": "h",
-            "metrics": {"regret": 0.1},
-            "status": "running",
-        },
-    ),
-    (
-        RegraAdequacaoResponse,
-        {
-            "rule_id": "R1",
-            "arm_id": "OFF-CR-003",
-            "condition": {"idade_max": 24},
-            "action": "block",
-        },
-    ),
-    (
-        CasoAvaliacaoResponse,
-        {
-            "case_id": "C1",
-            "context": {"idade": 70},
-            "expected_arm": "OFF-SEG-001",
-            "expected_reward": 1.0,
-            "rationale": "r",
-            "pass_fail_criteria": "arm==expected",
-            "type": "edge",
-        },
-    ),
 ]
 
 

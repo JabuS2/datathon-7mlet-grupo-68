@@ -139,6 +139,18 @@ jobs:
       - name: Run tests (pytest)
         run: poetry run pytest -v --disable-warnings
 
+      # Gate de propriedades: elegibilidade e invariância de fairness contra o golden set.
+      # Não precisa de Postgres/Redis/HTTP — roda o BanditService com store em memória.
+      - name: Offline evaluation (golden set)
+        run: poetry run python ../scripts/run_evaluation.py
+
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-report
+          path: reports/evaluation-report.md
+
   frontend-tests:
     runs-on: ubuntu-latest
 

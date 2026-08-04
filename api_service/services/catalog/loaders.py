@@ -86,29 +86,6 @@ def iter_seed_clients(path: str | Path, limit: int | None = None) -> Iterator[di
 # ─────────────────────────── golden set (avaliação) ───────────────────────────
 
 
-def load_evaluation_cases(path: str | Path) -> list[dict]:
-    """Lê `evaluation_cases.jsonl` (tolerante: [] se o arquivo ainda não existir)."""
-    p = Path(path)
-    if not p.exists():
-        return []
-    cases: list[dict] = []
-    for line in p.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        raw = json.loads(line)
-        cases.append(
-            {
-                "case_id": raw["case_id"],
-                "context": raw.get("context", {}),
-                "expected_arm": raw["expected_arm"],
-                "expected_reward": raw.get("expected_reward"),
-                "rationale": raw.get("rationale"),
-                "pass_fail_criteria": raw.get("pass_fail_criteria"),
-                "type": raw.get("type", "typical"),
-            }
-        )
-    return cases
 
 
 # ─────────────────────────── helpers ───────────────────────────

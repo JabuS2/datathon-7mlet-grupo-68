@@ -3,15 +3,12 @@ from typing import TypeVar, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repositories.caso_avaliacao import CasoAvaliacaoRepository
 from repositories.cliente import ClienteRepository
 from repositories.decisao import DecisaoRepository
 from repositories.evento_impressao import EventoImpressaoRepository
-from repositories.experimento import ExperimentoRepository
 from repositories.feedback import FeedbackRepository
 from repositories.oferta import OfertaRepository
 from repositories.recompensa import RecompensaRepository
-from repositories.regra_adequacao import RegraAdequacaoRepository
 from repositories.segmento import SegmentoRepository
 from repositories.user import UserRepository
 
@@ -65,20 +62,6 @@ class UnitOfWork:
     @property
     def recompensas(self) -> RecompensaRepository:
         return self._repo("recompensas", RecompensaRepository)
-
-    # ── Avaliação & assistente ───────────────────────────────────
-    @property
-    def casos_avaliacao(self) -> CasoAvaliacaoRepository:
-        return self._repo("casos_avaliacao", CasoAvaliacaoRepository)
-
-    @property
-    def experimentos(self) -> ExperimentoRepository:
-        return self._repo("experimentos", ExperimentoRepository)
-
-    # ── MLOps & governança ───────────────────────────────────────
-    @property
-    def regras_adequacao(self) -> RegraAdequacaoRepository:
-        return self._repo("regras_adequacao", RegraAdequacaoRepository)
 
     # ── Ofertas/feedback (fluxo servido pelo model_service) ──────
     # O contexto do cliente vem de `clientes` (acima); `client_profiles` foi consolidado nele.
