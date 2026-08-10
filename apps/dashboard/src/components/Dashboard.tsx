@@ -27,6 +27,32 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     },
   });
 
+  // Same generative-UI pattern as get_users_overview, for the text-to-SQL
+  // widgets: get_db_schema (schema-explorer) and run_sql_query (sql-results).
+  // McpUiResources needs no per-widget changes — it renders whatever envelope
+  // the mcp_server tool returned.
+  useCopilotAction({
+    name: "get_db_schema",
+    available: "disabled",
+    render: ({ status, result }) => {
+      if (status === "inProgress" || status === "executing") {
+        return <div className="widget-loading">Loading database schema…</div>;
+      }
+      return <McpUiResources result={result} />;
+    },
+  });
+
+  useCopilotAction({
+    name: "run_sql_query",
+    available: "disabled",
+    render: ({ status, result }) => {
+      if (status === "inProgress" || status === "executing") {
+        return <div className="widget-loading">Running query…</div>;
+      }
+      return <McpUiResources result={result} />;
+    },
+  });
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -44,8 +70,10 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
           <h2>Assistant</h2>
           <p>
             Ask the assistant to render dashboards, e.g. <em>&ldquo;show me the
-            users overview&rdquo;</em>. Widgets are rendered inline in the chat,
-            right below the assistant&rsquo;s reply.
+            users overview&rdquo;</em>, or ask it questions about the data, e.g.
+            <em>&ldquo;how many clientes are in each segmento?&rdquo;</em> or
+            <em>&ldquo;show me the database schema&rdquo;</em>. Widgets are
+            rendered inline in the chat, right below the assistant&rsquo;s reply.
           </p>
         </section>
 
@@ -53,7 +81,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
           <CopilotChat
             labels={{
               title: "Admin Assistant",
-              initial: "Hi! Ask me to show the users overview dashboard.",
+              initial: "Hi! Ask me to show the users overview, or ask a question about the data.",
             }}
           />
         </section>

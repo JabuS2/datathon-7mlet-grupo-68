@@ -96,8 +96,13 @@ services:
       PORT: "8200"
       MCP_HTTP_PATH: /mcp
       API_SERVICE_URL: http://api:8000
+      # Text-to-SQL widget: direct, SELECT-only access to both Postgres databases.
+      # Empty READONLY_DB_PASSWORD (unset in .env) leaves this blank; the tools no-op if so.
+      READONLY_DATABASE_URL: postgresql://${READONLY_DB_USER:-readonly_reporting}:${READONLY_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      READONLY_MODEL_DATABASE_URL: postgresql://${READONLY_DB_USER:-readonly_reporting}:${READONLY_DB_PASSWORD}@postgres:5432/${MODEL_POSTGRES_DB:-model_service}
     depends_on:
       - api
+      - postgres
     networks:
       - backend
     ports:
