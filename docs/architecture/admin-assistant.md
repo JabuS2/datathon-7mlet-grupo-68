@@ -6,6 +6,10 @@ CopilotKit (AG-UI), um **deep agent** LangChain decide o que fazer, e um
 A principal função do assistente é **renderizar dashboards**, chamando tools
 MCP que retornam recursos MCP-UI, os quais o CopilotKit renderiza inline.
 
+> Esta página cobre só o subsistema do assistente. Para como ele se encaixa
+> no resto da plataforma (front_service, api_service, model_service,
+> Postgres, Redis, MLflow), ver [Visão geral do sistema](system-overview.md).
+
 ## Componentes
 
 | Serviço          | Stack                         | Porta | Responsabilidade                                                   |
