@@ -4,8 +4,12 @@ Plataforma de investimentos (HP Invest) com backend FastAPI, serviço de modelos
 (multi-armed bandits) separado, frontend Angular e um assistente administrativo
 baseado em agentes (LangChain + MCP + CopilotKit).
 
+- **[Visão geral do sistema](architecture/system-overview.md)** — como as três
+  frentes (vitrine, motor de recomendação, admin assistant) se encaixam.
 - **[Arquitetura do Admin Assistant](architecture/admin-assistant.md)** — fluxo
   completo dashboard → agent_service → mcp_server → api_service.
+- **[Recursos de nuvem](architecture/cloud-resources.md)** — o mapeamento
+  para produção (EKS, RDS, ElastiCache, S3, e o que falta hoje para chegar lá).
 - **[Serviços](services/api-service.md)** — como rodar cada componente.
 - **[Contratos de API](api-contracts.md)** — request/response por endpoint.
 - **[Modelo de domínio](domain-model.md)** — as tabelas e o porquê de cada uma.
@@ -13,31 +17,12 @@ baseado em agentes (LangChain + MCP + CopilotKit).
 - **[Observabilidade](observability-datadog.md)** — logs JSON + Datadog.
 - **[Infraestrutura](infra.md)** — Docker Compose e Kubernetes.
 
-## Tecnologias de Nuvem
+## Tecnologias de nuvem
 
-Em produção, a arquitetura hoje local (containers stateless — API, mcp_server,
-agent_service, dashboard, front_service — orquestrados via Docker Compose ou
-um cluster Kubernetes genérico) se beneficiaria de rodar em **Amazon EKS**
-com auto scaling horizontal (HPA) reagindo à carga de cada serviço, atrás de
-um **Application Load Balancer** com health checks e múltiplas zonas de
-disponibilidade para não depender de uma única instância no caminho de
-requisições. Os componentes stateful (Postgres, Redis, OpenSearch), hoje
-single-instance no `docker-compose.yml`, ganhariam resiliência real com
-**RDS Multi-AZ** e **ElastiCache com réplicas**, eliminando pontos únicos de
-falha; dados e artefatos hoje presos em volumes locais (`./data`) passariam
-para **S3**, desacoplando-os do ciclo de vida dos containers.
-
-O fluxo de uma requisição já atravessa quatro serviços (dashboard →
-agent_service → mcp_server → api_service, ver
-[arquitetura do Admin Assistant](architecture/admin-assistant.md)). Hoje
-`api_service` e `model_service` emitem log estruturado em JSON e traces via
-ddtrace, coletados por um agente Datadog opcional no compose
-(`--profile datadog`); `agent_service`, `mcp_server` e os frontends ainda
-logam isoladamente. Em nuvem, a operação exigiria **CloudWatch** para centralizar
-logs e métricas de todos os pods no EKS, **CloudWatch Container Insights**
-para visibilidade de cluster/pod, e tracing distribuído (**X-Ray** ou
-OpenTelemetry) para acompanhar uma requisição através dos quatro serviços e
-localizar gargalos ou falhas sem precisar correlacionar logs manualmente.
-Alarmes ligados a SLOs de latência, taxa de erro e saturação — não apenas
-uptime — fechariam o ciclo, permitindo detectar degradação antes que vire
-indisponibilidade.
+A arquitetura hoje roda em Docker Compose (ou um Helmfile que cobre só o
+`api_service`) com Postgres/Redis/MLflow single-instance. O alvo de produção
+é **Amazon EKS** atrás de um ALB, com **RDS Multi-AZ**, **ElastiCache** e
+**S3** para os componentes stateful, e **CloudWatch**/**X-Ray** para
+observabilidade — ver o mapeamento completo, componente a componente, e as
+lacunas atuais (não existe hoje pipeline de imagem/deploy nem secrets
+gerenciados) em [Recursos de nuvem](architecture/cloud-resources.md).

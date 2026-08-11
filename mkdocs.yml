@@ -26,6 +26,8 @@ nav:
   - Home: index.md
   - Arquitetura:
       - Admin Assistant: architecture/admin-assistant.md
+      - Visão geral do sistema: architecture/system-overview.md
+      - Recursos de nuvem (produção): architecture/cloud-resources.md
       - Modelo de domínio: domain-model.md
       - Roadmap do backend: backend-roadmap.md
   - Serviços:
@@ -44,7 +46,11 @@ nav:
 
 markdown_extensions:
   - admonition
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight
   - toc:
       permalink: true

@@ -143,7 +143,7 @@ export function hasRenderableMcpUiContent(result: unknown): boolean {
 
 const IFRAME_STYLE = {
   width: "100%",
-  minHeight: 320,
+  minHeight: 600,
   border: "1px solid #e5e7eb",
   borderRadius: 12,
 } as const;
@@ -182,7 +182,7 @@ export function McpUiResources({ result }: { result: unknown }) {
         <UIResourceRenderer
           key={`resource-${index}`}
           resource={(block as { resource: { uri: string } }).resource}
-          htmlProps={{ autoResizeIframe: true, style: { width: "100%", minHeight: 320 } }}
+          htmlProps={{ autoResizeIframe: true, style: { width: "100%", minHeight: 600 } }}
           onUIAction={async (action) => {
             console.log("MCP-UI action:", action);
           }}

@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import type { Config } from "./config.js";
 import { registerGetUsersOverview } from "./tools/getUsersOverview.js";
+import { registerGetDbSchema } from "./tools/getDbSchema.js";
+import { registerRunSqlQuery } from "./tools/runSqlQuery.js";
 
 /**
  * Creates a fresh MCP server with all tools/widgets registered. A new instance
@@ -14,6 +16,8 @@ export function createMcpServer(config: Config): McpServer {
   });
 
   registerGetUsersOverview(server, config);
+  registerGetDbSchema(server, config);
+  registerRunSqlQuery(server, config);
 
   return server;
 }

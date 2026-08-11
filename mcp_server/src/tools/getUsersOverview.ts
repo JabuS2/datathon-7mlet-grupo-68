@@ -1,20 +1,12 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
+import { extractAuthorization } from "../authHeader.js";
 import { fetchUsersOverview } from "../apiClient.js";
 import type { Config } from "../config.js";
 import {
   USERS_OVERVIEW_WIDGET_URI,
   buildUsersOverviewHtml,
 } from "../widgets/usersOverview.js";
-
-function extractAuthorization(extra: unknown): string | undefined {
-  const headers = (extra as { requestInfo?: { headers?: Record<string, string | string[] | undefined> } })
-    ?.requestInfo?.headers;
-  if (!headers) return undefined;
-
-  const raw = headers["authorization"] ?? headers["Authorization"];
-  return Array.isArray(raw) ? raw[0] : raw;
-}
 
 export function registerGetUsersOverview(server: McpServer, config: Config): void {
   server.registerTool(
