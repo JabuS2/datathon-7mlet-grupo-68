@@ -28,3 +28,6 @@ A arquitetura hoje roda em Docker Compose (ou um Helmfile que cobre só o
 observabilidade — mapeamento completo, componente a componente, e as lacunas
 atuais (sem pipeline de imagem/deploy, sem secrets gerenciados) em
 `docs/architecture/cloud-resources.md`.
+
+
+Para a documentação completa e aprofundada acesse https://jabus2.github.io/datathon-7mlet-grupo-68/
