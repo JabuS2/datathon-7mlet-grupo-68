@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import tempfile
-from typing import Any
+from typing import Any, cast
 
 import mlflow
 from mlflow.exceptions import MlflowException, RestException
@@ -130,7 +130,7 @@ class ModelRegistry:
                 raise MlflowException(f"Modelo sem versões: {name}")
             version = max(int(v.version) for v in versions)
         model = mlflow.pyfunc.load_model(f"models:/{name}/{version}")
-        return model.unwrap_python_model().state
+        return cast(dict[str, Any], model.unwrap_python_model().state)
 
     # ---------------------------------------------------------------- delete
     def delete_model(self, name: str) -> dict[str, Any]:

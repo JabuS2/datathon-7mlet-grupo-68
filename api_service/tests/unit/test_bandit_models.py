@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from typing import cast
 
 import numpy as np
 import pytest
+from redis.asyncio import Redis as RedisClient
 
 from exceptions import BadRequest, NotFound
 from services.bandit.audit import build_audit, strip_protected
@@ -16,7 +18,7 @@ from services.bandit.models.thompson import ThompsonSampling
 from services.bandit.policy_resolver import auto_policy, resolve_policy
 from services.bandit.service import BanditService
 from services.bandit.store.state_store import StateStore
-from services.monitoring.service import MonitoringService
+from services.monitoring.service import MonitoringService, MonitoringUnitOfWork
 
 
 def test_context_builder_builds_and_roundtrips_state() -> None:
@@ -239,7 +241,7 @@ async def test_state_store_serializes_json_and_lock() -> None:
             return (key, kwargs)
 
     redis = Redis()
-    store = StateStore(redis, "p")
+    store = StateStore(cast(RedisClient, redis), "p")
     await store.save_state("x", {"v": 1})
     assert await store.load_state("x") == {"v": 1}
     assert await store.load_state("none") is None
@@ -274,7 +276,7 @@ def test_catalog_reads_client_stats_and_filters(tmp_path) -> None:
 async def test_monitoring_compute_publish_and_active_versions() -> None:
     class Decisions:
         async def observations_since(self, start, policy):
-            return [("A", 1.0, start)]
+            return [("A", 1.0, 50.0)]
 
         async def renda_percentis_between(self, start, end, policy):
             return [10.0, 20.0]
@@ -299,7 +301,7 @@ async def test_monitoring_compute_publish_and_active_versions() -> None:
             self.calls.append(kwargs)
 
     client = Client()
-    service = MonitoringService(Uow(), client)
+    service = MonitoringService(cast(MonitoringUnitOfWork, Uow()), client)
     result = await service.compute("p1", 2)
     assert result["decisions"] == 1
     await service.publish("p1", 2)

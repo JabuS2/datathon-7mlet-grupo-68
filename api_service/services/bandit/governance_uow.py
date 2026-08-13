@@ -45,9 +45,10 @@ class UnitOfWork:
         return list(result.scalars().all())
 
     async def get_active_policy(self) -> Politica | None:
-        return await self.session.scalar(
+        policy: Politica | None = await self.session.scalar(
             select(Politica).where(Politica.status == StatusPolitica.ACTIVE).limit(1)
         )
+        return policy
 
     async def list_active_policies(self) -> list[Politica]:
         result = await self.session.execute(

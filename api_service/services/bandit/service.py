@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from contextlib import AbstractAsyncContextManager
+from typing import Any, Protocol
 
 from exceptions import BadRequest, NotFound
 from services.bandit.audit import build_audit, strip_protected
@@ -17,9 +18,17 @@ from services.bandit.models import (
     model_from_state,
 )
 from services.bandit.policy_resolver import ResolvedPolicy, auto_policy
-from services.bandit.store.state_store import StateStore
 
 logger = logging.getLogger(__name__)
+
+
+class BanditStateStore(Protocol):
+    async def load_context(self) -> dict[str, Any] | None: ...
+    async def save_context(self, state: dict[str, Any]) -> None: ...
+    async def load_state(self, policy_id: str) -> dict[str, Any] | None: ...
+    async def save_state(self, policy_id: str, state: dict[str, Any]) -> None: ...
+    async def delete_state(self, policy_id: str) -> None: ...
+    def lock(self, policy_id: str) -> AbstractAsyncContextManager[Any]: ...
 
 
 class BanditService:
@@ -35,7 +44,9 @@ class BanditService:
     `auto-{algorithm}` e o comportamento é idêntico ao anterior.
     """
 
-    def __init__(self, catalog: Catalog, store: StateStore, default_algorithm: str = "linucb"):
+    def __init__(
+        self, catalog: Catalog, store: BanditStateStore, default_algorithm: str = "linucb"
+    ):
         self.catalog = catalog
         self.store = store
         self.default_algorithm = default_algorithm

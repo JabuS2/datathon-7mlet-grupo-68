@@ -17,6 +17,7 @@ guardamos o valor publicado, para exibir ao lado da política que ele justificou
 from __future__ import annotations
 
 import logging
+from collections.abc import Awaitable, Callable
 from uuid import uuid4
 
 from db.governance_models import AprovacaoHumana, CicloRetreino, MetricaSnapshot, Politica
@@ -45,7 +46,11 @@ class Conflict(AppException):
 
 
 class GovernanceService:
-    def __init__(self, uow: UnitOfWork, snapshot=None):
+    def __init__(
+        self,
+        uow: UnitOfWork,
+        snapshot: Callable[[ResolvedPolicy], Awaitable[str | None]] | None = None,
+    ):
         """`snapshot(policy) -> versão | None`: registra o estado da política no MLflow.
 
         Injetado em vez de importado para que abrir um ciclo continue funcionando (sem

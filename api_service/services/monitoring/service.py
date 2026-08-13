@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
+from typing import Protocol
 
-from db.unit_of_work import UnitOfWork
 from services.bandit.client import BanditClient
 from services.monitoring.metrics import Metric, build_metrics
 
@@ -25,6 +25,30 @@ logger = logging.getLogger(__name__)
 #: o período corrente — assim o drift é medido contra o próprio histórico, sem depender de
 #: um snapshot externo que alguém teria de manter.
 DEFAULT_WINDOW_DAYS = 14
+
+
+class MonitoringRepository(Protocol):
+    async def observations_since(
+        self, start: datetime, policy_version: str | None
+    ) -> list[tuple[str, float, float]]: ...
+    async def renda_percentis_between(
+        self, start: datetime, end: datetime, policy_version: str | None
+    ) -> list[float]: ...
+    async def policy_versions_since(self, since: datetime) -> list[str]: ...
+
+
+class MonitoringUnitOfWork(Protocol):
+    @property
+    def decisoes(self) -> MonitoringRepository: ...
+
+    async def __aenter__(self) -> MonitoringUnitOfWork: ...
+    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None: ...
+
+
+class MetricPublisher(Protocol):
+    async def publish_metric(
+        self, *, policy_id: str, metric: str, value: float, alert: bool
+    ) -> dict[str, object]: ...
 
 
 def _utc_naive() -> datetime:
@@ -37,7 +61,11 @@ def _utc_naive() -> datetime:
 
 
 class MonitoringService:
-    def __init__(self, uow: UnitOfWork, model_client: BanditClient | None = None):
+    def __init__(
+        self,
+        uow: MonitoringUnitOfWork,
+        model_client: MetricPublisher | None = None,
+    ):
         self.uow = uow
         self.model_client = model_client or BanditClient()
 
