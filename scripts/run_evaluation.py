@@ -18,12 +18,12 @@ import os
 import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(BASE_DIR, "model_service"))
+sys.path.insert(0, os.path.join(BASE_DIR, "api_service"))
 
-from catalog import Catalog  # noqa: E402
-from evaluation import evaluate, load_cases  # noqa: E402
-from service import BanditService  # noqa: E402
-from store import StateStore  # noqa: E402
+from services.bandit.catalog import Catalog  # noqa: E402
+from services.bandit.evaluation import evaluate, load_cases  # noqa: E402
+from services.bandit import BanditService  # noqa: E402
+from services.bandit.store import StateStore  # noqa: E402
 
 GOLDEN = os.path.join(BASE_DIR, "data", "golden_set")
 CASES = os.path.join(GOLDEN, "evaluation_cases.jsonl")

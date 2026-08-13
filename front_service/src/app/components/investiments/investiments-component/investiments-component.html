@@ -1,0 +1,13 @@
+<app-sidebar />
+
+<div class="ml-[280px] min-h-screen bg-[#f9f9f9]">
+  <app-topbar />
+  <main class="max-w-[1440px] mx-auto px-6 lg:px-10 pt-20 pb-10">
+    <app-wallet class="xl:col-span-8" />
+    <div class="flex flex-row gap-8 mt-8">
+      <app-recent-transactions />
+      <app-future-transactions />
+    </div>
+    @if (profile(); as profile) {}
+  </main>
+</div>

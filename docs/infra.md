@@ -6,7 +6,6 @@ Todos os serviços de infra estão disponíveis em dois targets: Docker Compose
 | Serviço | Docker Compose | Kubernetes (NodePort) |
 | --- | --- | --- |
 | api_service (FastAPI) | http://localhost:8001 | http://localhost:30800 |
-| model_service (bandits) | http://localhost:8002 | — (sem chart) |
 | MLflow | http://localhost:5000 | — (sem chart) |
 | front_service (Angular) | http://localhost:4200 | — (sem chart) |
 | dashboard (Next) | http://localhost:3000 | — (sem chart) |

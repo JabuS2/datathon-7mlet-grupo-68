@@ -1,4 +1,4 @@
-import { Component, inject, input, OnChanges, signal } from '@angular/core';
+import { Component, inject, input, OnChanges, OnInit, signal } from '@angular/core';
 
 import { IInterest } from '../../../interfaces/iinterest';
 import { Investiment } from '../../../services/investiment';
@@ -9,7 +9,7 @@ import { Investiment } from '../../../services/investiment';
   imports: [],
   templateUrl: './wallet.html',
 })
-export class WalletComponent implements OnChanges {
+export class WalletComponent implements OnInit, OnChanges {
   private investimentService = inject(Investiment);
 
   /**
@@ -20,6 +20,10 @@ export class WalletComponent implements OnChanges {
   refreshKey = input<number>(0);
 
   itens = signal<IInterest[]>([]);
+
+  ngOnInit(): void {
+    this.carregar();
+  }
 
   ngOnChanges(): void {
     this.carregar();
