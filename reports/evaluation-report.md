@@ -59,4 +59,3 @@ Falhas:
 | `adversarial` | 8 | 8 |
 | `edge` | 8 | 8 |
 | `typical` | 8 | 8 |
-

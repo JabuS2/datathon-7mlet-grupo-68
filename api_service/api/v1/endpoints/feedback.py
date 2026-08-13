@@ -7,11 +7,11 @@ from db.dependencies import get_uow
 from db.unit_of_work import UnitOfWork
 from models.user import User
 from schemas.feedback import FeedbackCreate, FeedbackResponse
-from services.model_client import ModelServiceClient
+from services.bandit.client import BanditClient
 from services.offer.offer import OfferService
 
 router = APIRouter()
-model_client = ModelServiceClient()
+model_client = BanditClient()
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 

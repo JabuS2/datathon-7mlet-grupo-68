@@ -51,7 +51,7 @@ describe('WalletComponent', () => {
   });
 
   it('mostra o estado vazio explicando como preencher', () => {
-    investimentMock.interests.mockReturnValueOnce(of([]));
+    investimentMock.interests.mockReturnValue(of([]));
     fixture.componentRef.setInput('refreshKey', 1);
     fixture.detectChanges();
 
@@ -61,7 +61,7 @@ describe('WalletComponent', () => {
   });
 
   it('mostra a contagem de cliques quando há repetição', () => {
-    investimentMock.interests.mockReturnValueOnce(of([{ ...item, cliques: 3 }]));
+    investimentMock.interests.mockReturnValue(of([{ ...item, cliques: 3 }]));
     fixture.componentRef.setInput('refreshKey', 1);
     fixture.detectChanges();
 
@@ -69,7 +69,7 @@ describe('WalletComponent', () => {
   });
 
   it('plural na contagem de produtos', () => {
-    investimentMock.interests.mockReturnValueOnce(
+    investimentMock.interests.mockReturnValue(
       of([item, { ...item, armId: 'OFF-SEG-001' }]),
     );
     fixture.componentRef.setInput('refreshKey', 1);
@@ -84,6 +84,6 @@ describe('WalletComponent', () => {
     fixture.componentRef.setInput('refreshKey', 2);
     fixture.detectChanges();
 
-    expect(investimentMock.interests).toHaveBeenCalledTimes(2);
+    expect(investimentMock.interests).toHaveBeenCalledTimes(3);
   });
 });

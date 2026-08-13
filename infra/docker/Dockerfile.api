@@ -23,7 +23,7 @@ RUN chmod +x /app/entrypoint.sh
 RUN useradd --create-home --uid 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8001
 
 # O entrypoint espera o Postgres, migra, semeia (SEED_DB) e sobe o uvicorn sob
 # ddtrace-run (instrumentação Datadog) sem --reload. Sem DD_TRACE_ENABLED=true

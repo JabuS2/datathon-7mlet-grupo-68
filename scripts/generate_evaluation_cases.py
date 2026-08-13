@@ -36,7 +36,7 @@ from typing import Any
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GOLDEN = os.path.join(BASE_DIR, "data", "golden_set")
-CATALOG_PATH = os.path.join(GOLDEN, "offer_catalog.json")
+CATALOG_PATH = os.path.join(GOLDEN, "sexo.json")
 CLIENTS_PATH = os.path.join(GOLDEN, "golden_clients.csv")
 OUTPUT_PATH = os.path.join(GOLDEN, "evaluation_cases.jsonl")
 
@@ -77,7 +77,9 @@ def _load_clients(limit: int = 400) -> list[dict]:
             if i >= limit:
                 break
             ctx = {c: _num(row[c]) for c in CONTEXT_COLUMNS if c in row}
-            ctx["segmentos_sinteticos"] = json.loads(row.get("segmentos_sinteticos") or "[]")
+            ctx["segmentos_sinteticos"] = json.loads(
+                row.get("segmentos_sinteticos") or "[]"
+            )
             ctx["cod_cliente"] = _num(row["cod_cliente"])
             ctx["_sexo"] = row.get("sexo")
             rows.append(ctx)

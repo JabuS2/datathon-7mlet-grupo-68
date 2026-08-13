@@ -8,6 +8,7 @@ import { RegisterComponent } from './components/register/register';
 import { OnboardingComponent } from './components/onboarding/onboarding';
 import { DashboardComponent } from './components/dashboard/dashboard';
 import { ProfileComponent } from './components/profile/profile';
+import { InvestimentsComponent } from './components/investiments/investiments-component/investiments-component';
 
 export const routes: Routes = [
   {
@@ -39,6 +40,11 @@ export const routes: Routes = [
   {
     path: 'profile',
     component: ProfileComponent,
+    canActivate: [authGuard, profileGuard],
+  },
+  {
+    path: 'investments',
+    component: InvestimentsComponent,
     canActivate: [authGuard, profileGuard],
   },
   {

@@ -65,7 +65,9 @@ class OnboardingService:
                 access_token=token, cliente=ClienteResponse.model_validate(cliente)
             )
 
-    async def complete_profile(self, user: User, req: ProfileQuestions) -> ClienteResponse:
+    async def complete_profile(
+        self, user: User, req: ProfileQuestions
+    ) -> ClienteResponse:
         """Anexa um perfil de cliente a uma conta que **já existe** (cadastro em duas etapas).
 
         É o caminho do front: registrar → logar → responder as perguntas. Separar isso do

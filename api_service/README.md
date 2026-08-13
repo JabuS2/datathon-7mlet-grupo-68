@@ -142,12 +142,8 @@ make test                   # rodar testes
 
 O `api_service` segue camadas: `api/` (FastAPI) → `services/` (regra de negócio) →
 `repositories/` + `models/` (persistência), com `UnitOfWork` controlando a transação.
-A regra central: nada em `services/` importa FastAPI.
-
-O bandit existe hoje em **dois lugares** — o in-process (`services/bandit` + `services/decision`,
-estado na tabela `estados_braco`) que atende `/decide`, `/showcase` e `/me/*`, e o
-`model_service` (Redis + MLflow) que atende `/offers` e `/feedback`. Consolidar os dois é
-decisão em aberto; ver `docs/backend-roadmap.md`.
+A regra central: nada em `services/` importa FastAPI. O núcleo de bandits, a governança,
+o estado Redis e o registry MLflow vivem em `services/bandit/`, sob a mesma API.
 
 ## Mapa de pastas
 
@@ -162,17 +158,12 @@ datathon-7mlet-grupo-68/
 │   │   │                           # elegibilidade, engine
 │   │   ├── decision/               # serving: liga o engine ao banco + log auditável
 │   │   ├── governance/             # políticas, ciclos de retreino, aprovações, métricas
-│   │   ├── offer/                  # ofertas/feedback via model_service
+│   │   ├── offer/                  # ofertas/feedback
 │   │   ├── account/ demo/ dashboard/ catalog/ seed/
-│   │   └── model_client.py         # cliente HTTP do model_service
+│   │   └── bandit/                  # modelos, estado, governança e registry
 │   ├── models/ repositories/ schemas/ enums/
 │   ├── alembic/                    # migrações
 │   └── tests/                      # unit / integration / e2e
-│
-├── model_service/                  # bandits: /rank, /update, registry MLflow
-│   ├── models/                     # linucb, thompson, baseline, context
-│   ├── store/                      # StateStore (Redis)
-│   └── registry/                   # MLflow model registry
 │
 ├── front_service/                  # portal do cliente (Angular)
 ├── apps/dashboard/                 # assistente admin (Next + CopilotKit)

@@ -13,7 +13,9 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title=settings.PROJECT_NAME, version=settings.VERSION, description=settings.DESCRIPTION
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    description=settings.DESCRIPTION,
 )
 
 app.add_middleware(
@@ -29,7 +31,11 @@ app.add_middleware(
 async def app_exception_handler(request: Request, exc: AppException):
     logger.warning(
         "app_exception",
-        extra={"code": exc.code, "status_code": exc.status_code, "path": request.url.path},
+        extra={
+            "code": exc.code,
+            "status_code": exc.status_code,
+            "path": request.url.path,
+        },
     )
     return JSONResponse(
         status_code=exc.status_code, content={"error": exc.message, "code": exc.code}
@@ -39,10 +45,12 @@ async def app_exception_handler(request: Request, exc: AppException):
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     logger.exception(
-        "unhandled_exception", extra={"method": request.method, "path": request.url.path}
+        "unhandled_exception",
+        extra={"method": request.method, "path": request.url.path},
     )
     return JSONResponse(
-        status_code=500, content={"error": "Internal server error", "code": "INTERNAL_ERROR"}
+        status_code=500,
+        content={"error": "Internal server error", "code": "INTERNAL_ERROR"},
     )
 
 

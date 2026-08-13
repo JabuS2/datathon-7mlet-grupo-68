@@ -38,7 +38,7 @@ def main() -> int:
         help="publica as métricas no model_service além de anexá-las ao ciclo",
     )
     parser.add_argument("--api", default=os.getenv("API_SERVICE_URL", "http://localhost:8001"))
-    parser.add_argument("--model", default=os.getenv("MODEL_SERVICE_URL", "http://localhost:8002"))
+    parser.add_argument("--model", default=os.getenv("API_SERVICE_URL", "http://localhost:8001"))
     parser.add_argument("--token", default=os.getenv("OPERATOR_TOKEN", ""))
     args = parser.parse_args()
 
@@ -47,7 +47,8 @@ def main() -> int:
         return 1
 
     headers = {"Authorization": f"Bearer {args.token}"}
-    api, model = args.api.rstrip("/"), args.model.rstrip("/")
+    api = args.api.rstrip("/")
+    model = args.model.rstrip("/")
 
     with httpx.Client(timeout=60.0) as client:
         path = "/api/v1/monitoring/metrics"

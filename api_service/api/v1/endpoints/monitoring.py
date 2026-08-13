@@ -9,12 +9,12 @@ from db.dependencies import get_uow
 from db.unit_of_work import UnitOfWork
 from models.user import User
 from schemas.monitoring import MetricsReport
-from services.model_client import ModelServiceClient
+from services.bandit.client import BanditClient
 from services.monitoring import MonitoringService
 from services.monitoring.service import DEFAULT_WINDOW_DAYS
 
 router = APIRouter(tags=["monitoring"])
-model_client = ModelServiceClient()
+model_client = BanditClient()
 
 Operador = Annotated[User, Depends(require_operador)]
 WindowDays = Annotated[int, Query(ge=1, le=365)]

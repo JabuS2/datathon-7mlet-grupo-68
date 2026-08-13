@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { API_BASE_URL, MODEL_SERVICE_URL } from '../core/api';
+import { API_BASE_URL } from '../core/api';
 import {
   IArmState,
   ICicloRetreino,
@@ -28,25 +28,25 @@ export class Governance {
 
   // ── políticas ──────────────────────────────────────────────
   policies(): Observable<IPolitica[]> {
-    return this.http.get<IPolitica[]>(`${MODEL_SERVICE_URL}/policies`);
+    return this.http.get<IPolitica[]>(`${API_BASE_URL}/policies`);
   }
 
   arms(policyId: string): Observable<IArmState[]> {
-    return this.http.get<IArmState[]>(`${MODEL_SERVICE_URL}/policies/${policyId}/arms`);
+    return this.http.get<IArmState[]>(`${API_BASE_URL}/policies/${policyId}/arms`);
   }
 
   promote(policyId: string): Observable<IPolitica> {
-    return this.http.post<IPolitica>(`${MODEL_SERVICE_URL}/policies/${policyId}/promote`, {});
+    return this.http.post<IPolitica>(`${API_BASE_URL}/policies/${policyId}/promote`, {});
   }
 
   // ── ciclos de retreino ─────────────────────────────────────
   cycles(): Observable<ICicloRetreino[]> {
-    return this.http.get<ICicloRetreino[]>(`${MODEL_SERVICE_URL}/retrain-cycles`);
+    return this.http.get<ICicloRetreino[]>(`${API_BASE_URL}/retrain-cycles`);
   }
 
   /** Abre um ciclo; o model_service versiona o estado no MLflow e grava a versão. */
   startCycle(policyId: string, metrics: Record<string, number>): Observable<ICicloRetreino> {
-    return this.http.post<ICicloRetreino>(`${MODEL_SERVICE_URL}/retrain-cycles`, {
+    return this.http.post<ICicloRetreino>(`${API_BASE_URL}/retrain-cycles`, {
       policy_id: policyId,
       run_id: null,
       metrics,
@@ -56,14 +56,14 @@ export class Governance {
   /** Gate humano: `approve` promove a candidata; `reject` só registra. */
   decide(runId: string, decision: 'approve' | 'reject', userId: number, note?: string) {
     return this.http.post(
-      `${MODEL_SERVICE_URL}/approvals?user_id=${userId}`,
+      `${API_BASE_URL}/approvals?user_id=${userId}`,
       { run_id: runId, decision, note: note ?? null },
     );
   }
 
   rollback(runId: string, toPolicyId: string): Observable<ICicloRetreino> {
     return this.http.post<ICicloRetreino>(
-      `${MODEL_SERVICE_URL}/retrain-cycles/${runId}/rollback`,
+      `${API_BASE_URL}/retrain-cycles/${runId}/rollback`,
       { to_policy_id: toPolicyId },
     );
   }
@@ -72,7 +72,7 @@ export class Governance {
   /** Publicadas (histórico exibido ao lado da política). */
   publishedMetrics(policyId?: string): Observable<IMetricaPublicada[]> {
     const q = policyId ? `?policy_id=${policyId}` : '';
-    return this.http.get<IMetricaPublicada[]>(`${MODEL_SERVICE_URL}/metrics${q}`);
+    return this.http.get<IMetricaPublicada[]>(`${API_BASE_URL}/metrics${q}`);
   }
 
   /** Apuradas agora pelo api_service, a partir do log auditável. */
@@ -91,6 +91,6 @@ export class Governance {
 
   // ── registry ───────────────────────────────────────────────
   registryModels(): Observable<IModeloRegistrado[]> {
-    return this.http.get<IModeloRegistrado[]>(`${MODEL_SERVICE_URL}/registry/models`);
+    return this.http.get<IModeloRegistrado[]>(`${API_BASE_URL}/registry/models`);
   }
 }

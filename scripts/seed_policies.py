@@ -42,8 +42,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--url",
-        default=os.getenv("MODEL_SERVICE_URL", "http://localhost:8002"),
-        help="base do model_service (default: $MODEL_SERVICE_URL ou localhost:8002)",
+        default=os.getenv("API_SERVICE_URL", "http://localhost:8001"),
+        help="base da API (default: $API_SERVICE_URL ou localhost:8001)",
     )
     args = parser.parse_args()
     base = args.url.rstrip("/")

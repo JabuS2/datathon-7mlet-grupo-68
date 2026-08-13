@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { API_BASE_URL, MODEL_SERVICE_URL } from '../core/api';
+import { API_BASE_URL } from '../core/api';
 import { Governance } from './governance';
 
 /**
@@ -27,33 +27,33 @@ describe('Governance', () => {
 
   it('lista políticas no model_service', () => {
     service.policies().subscribe();
-    const req = httpMock.expectOne(MODEL_SERVICE_URL + '/policies');
+    const req = httpMock.expectOne(API_BASE_URL + '/policies');
     expect(req.request.method).toBe('GET');
     req.flush([]);
   });
 
   it('lê os pesos de uma política', () => {
     service.arms('linucb-v1').subscribe();
-    const req = httpMock.expectOne(MODEL_SERVICE_URL + '/policies/linucb-v1/arms');
+    const req = httpMock.expectOne(API_BASE_URL + '/policies/linucb-v1/arms');
     expect(req.request.method).toBe('GET');
     req.flush([]);
   });
 
   it('promove uma política', () => {
     service.promote('thompson-v1').subscribe();
-    const req = httpMock.expectOne(MODEL_SERVICE_URL + '/policies/thompson-v1/promote');
+    const req = httpMock.expectOne(API_BASE_URL + '/policies/thompson-v1/promote');
     expect(req.request.method).toBe('POST');
     req.flush({});
   });
 
   it('lista ciclos de retreino', () => {
     service.cycles().subscribe();
-    httpMock.expectOne(MODEL_SERVICE_URL + '/retrain-cycles').flush([]);
+    httpMock.expectOne(API_BASE_URL + '/retrain-cycles').flush([]);
   });
 
   it('abre ciclo enviando as métricas apuradas', () => {
     service.startCycle('linucb-v1', { regret: 0.2 }).subscribe();
-    const req = httpMock.expectOne(MODEL_SERVICE_URL + '/retrain-cycles');
+    const req = httpMock.expectOne(API_BASE_URL + '/retrain-cycles');
     expect(req.request.body).toEqual({
       policy_id: 'linucb-v1',
       run_id: null,
@@ -64,31 +64,31 @@ describe('Governance', () => {
 
   it('o gate humano leva quem aprovou', () => {
     service.decide('run-1', 'approve', 7, 'ok').subscribe();
-    const req = httpMock.expectOne(MODEL_SERVICE_URL + '/approvals?user_id=7');
+    const req = httpMock.expectOne(API_BASE_URL + '/approvals?user_id=7');
     expect(req.request.body).toEqual({ run_id: 'run-1', decision: 'approve', note: 'ok' });
     req.flush({});
   });
 
   it('nota é opcional no gate', () => {
     service.decide('run-1', 'reject', 7).subscribe();
-    const req = httpMock.expectOne(MODEL_SERVICE_URL + '/approvals?user_id=7');
+    const req = httpMock.expectOne(API_BASE_URL + '/approvals?user_id=7');
     expect(req.request.body.note).toBeNull();
     req.flush({});
   });
 
   it('rollback aponta a política de destino', () => {
     service.rollback('run-1', 'antiga-v0').subscribe();
-    const req = httpMock.expectOne(MODEL_SERVICE_URL + '/retrain-cycles/run-1/rollback');
+    const req = httpMock.expectOne(API_BASE_URL + '/retrain-cycles/run-1/rollback');
     expect(req.request.body).toEqual({ to_policy_id: 'antiga-v0' });
     req.flush({});
   });
 
   it('lista métricas publicadas, com e sem filtro', () => {
     service.publishedMetrics().subscribe();
-    httpMock.expectOne(MODEL_SERVICE_URL + '/metrics').flush([]);
+    httpMock.expectOne(API_BASE_URL + '/metrics').flush([]);
 
     service.publishedMetrics('linucb-v1').subscribe();
-    httpMock.expectOne(MODEL_SERVICE_URL + '/metrics?policy_id=linucb-v1').flush([]);
+    httpMock.expectOne(API_BASE_URL + '/metrics?policy_id=linucb-v1').flush([]);
   });
 
   it('apura métricas no api_service (é lá que estão decisao/recompensa)', () => {
@@ -118,6 +118,6 @@ describe('Governance', () => {
 
   it('lista os modelos do registry', () => {
     service.registryModels().subscribe();
-    httpMock.expectOne(MODEL_SERVICE_URL + '/registry/models').flush([]);
+    httpMock.expectOne(API_BASE_URL + '/registry/models').flush([]);
   });
 });

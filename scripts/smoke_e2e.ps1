@@ -8,14 +8,13 @@
 
 $ErrorActionPreference = "Stop"
 $base  = "http://localhost:8001/api/v1"
-$model = "http://localhost:8002/api/v1"
 $email = "smoke@datathon.local"
 
 function J($o) { $o | ConvertTo-Json -Compress -Depth 6 }
 
 # health
 Write-Output "health api:   $((Invoke-RestMethod "$base/health").status)"
-Write-Output "health model: $((Invoke-RestMethod "$model/health").status)"
+Write-Output "health bandit: $((Invoke-RestMethod "$base/health").status)"
 
 # auth
 try { Invoke-RestMethod -Uri "$base/register" -Method Post -ContentType "application/json" -Body (@{email=$email;password="password123"}|ConvertTo-Json) | Out-Null } catch {}
@@ -33,8 +32,8 @@ $after = ($o2 | Where-Object { $_.armId -eq $target }).rank
 Write-Output "feedback x20 em '$target': rank $before -> $after (aprendizado: $($after -lt $before))"
 
 # MLflow registry
-$reg = Invoke-RestMethod -Uri "$model/registry/models" -Method Post -ContentType "application/json" -Body (@{name="bandit-linucb";algorithm="linucb"}|ConvertTo-Json)
+$reg = Invoke-RestMethod -Uri "$base/registry/models" -Method Post -ContentType "application/json" -Body (@{name="bandit-linucb";algorithm="linucb"}|ConvertTo-Json)
 Write-Output "registry register: $(J $reg)"
-Write-Output "registry list:     $(J (Invoke-RestMethod "$model/registry/models"))"
+Write-Output "registry list:     $(J (Invoke-RestMethod "$base/registry/models"))"
 
 Write-Output "SMOKE OK"

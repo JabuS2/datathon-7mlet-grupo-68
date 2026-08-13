@@ -10,11 +10,5 @@
  */
 export const API_BASE_URL = 'http://localhost:8001/api/v1';
 
-/**
- * Base do `model_service`. O console de operação fala direto com ele — o CORS do serviço
- * já libera :4200. Governança (políticas, ciclos, aprovações) e registry vivem lá.
- */
-export const MODEL_SERVICE_URL = 'http://localhost:8002/api/v1';
-
 /** UI do MLflow, embutida no console via iframe. */
 export const MLFLOW_URL = 'http://localhost:5000';

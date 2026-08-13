@@ -19,11 +19,11 @@ from schemas.decisao import (
     ShowcaseRequest,
     ShowcaseResponse,
 )
+from services.bandit.client import BanditClient
 from services.decision.service import DecisionService
-from services.model_client import ModelServiceClient
 
 router = APIRouter(tags=["serving"])
-model_client = ModelServiceClient()
+model_client = BanditClient()
 
 
 @router.post("/decide", response_model=DecideResponse)
@@ -40,4 +40,6 @@ async def showcase(body: ShowcaseRequest, uow: UnitOfWork = Depends(get_uow)):
 
 @router.post("/reward", response_model=RewardResponse)
 async def reward(body: RewardRequest, uow: UnitOfWork = Depends(get_uow)):
-    return await DecisionService(uow, model_client).reward(body.decision_id, body.converted)
+    return await DecisionService(uow, model_client).reward(
+        body.decision_id, body.converted
+    )

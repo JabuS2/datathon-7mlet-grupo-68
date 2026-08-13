@@ -33,7 +33,7 @@ from schemas.decisao import (
     RewardResponse,
     ShowcaseResponse,
 )
-from services.model_client import ModelServiceClient
+from services.bandit.client import BanditClient
 from settings import settings
 
 
@@ -43,9 +43,9 @@ def _finite(value: float) -> float:
 
 
 class DecisionService:
-    def __init__(self, uow: UnitOfWork, model_client: ModelServiceClient | None = None):
+    def __init__(self, uow: UnitOfWork, model_client: BanditClient | None = None):
         self.uow = uow
-        self.model_client = model_client or ModelServiceClient()
+        self.model_client = model_client or BanditClient()
 
     # ── /decide ──────────────────────────────────────────────────
     async def decide(self, cod_cliente: int, channel, arm_id: str | None = None) -> DecideResponse:

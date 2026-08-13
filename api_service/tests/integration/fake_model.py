@@ -22,7 +22,7 @@ _CATEGORIES = {"OFF-CR-001": "credito", "OFF-INV-004": "investimento", "OFF-SEG-
 
 
 class FakeModelClient:
-    """Mesma superfície de `ModelServiceClient`, com estado em memória."""
+    """Mesma superfície de `BanditClient`, com estado em memória."""
 
     def __init__(self, policy_id: str = "linucb-v1", algorithm: str = "linucb"):
         self.policy_id = policy_id
