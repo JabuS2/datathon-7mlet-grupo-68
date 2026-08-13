@@ -3,6 +3,9 @@ from pathlib import Path
 from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# O backend pode ser iniciado a partir de `api_service/`, mas o `.env` fica na raiz.
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+
 # Valores de SECRET_KEY conhecidos/fracos que nunca podem ir para produção.
 _WEAK_SECRETS = {"", "your_secret_key", "changeme", "secret"}
 _PROD_ENVS = {"production", "prod", "staging"}
@@ -16,16 +19,21 @@ class Settings(BaseSettings):
     DESCRIPTION: str = "API for HP Invest"
     # development | staging | production — controla validações de segurança.
     ENVIRONMENT: str = "development"
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:4200"]  # Rotas que podem acessar a API
+    BACKEND_CORS_ORIGINS: list[str] = [
+        "http://localhost:4200"
+    ]  # Rotas que podem acessar a API
     API_PORT: int = 8000
 
     # Diretório dos dados de referência (catálogo, golden set). Default: <repo>/data;
     # no Docker o compose monta ./data em /app/data (sobrescreva via env DATA_DIR).
     DATA_DIR: str = str(Path(__file__).resolve().parent.parent / "data")
 
-    ### Model Service (bandits)
-    MODEL_SERVICE_URL: str = "http://localhost:8002"
+    ### Bandits (executados nesta API)
+    CATALOG_PATH: str | None = None
+    CLIENTS_CSV_PATH: str | None = None
     DEFAULT_ALGORITHM: str = "linucb"
+    MLFLOW_TRACKING_URI: str = "http://localhost:5000"
+    MLFLOW_EXPERIMENT_NAME: str = "datathon-mab"
 
     ### Database Settings
     # Se DATABASE_URL for definida, tem precedência sobre os POSTGRES_* (ex.: Docker/Compose).
@@ -54,6 +62,16 @@ class Settings(BaseSettings):
             return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
+    @property
+    def catalog_path(self) -> str:
+        return str(Path(self.DATA_DIR) / "golden_set" / "offer_catalog.json")
+
+    @property
+    def clients_csv_path(self) -> str:
+        return self.CLIENTS_CSV_PATH or str(
+            Path(self.DATA_DIR) / "golden_set" / "golden_clients.csv"
+        )
+
     ### OpenSearch Settings
     OPENSEARCH_HOST: str = "localhost"
     OPENSEARCH_PORT: int = 9200
@@ -73,7 +91,7 @@ class Settings(BaseSettings):
     # dashboard / pgAdmin. Sem isso o pydantic-settings rejeita (extra_forbidden) toda chave
     # que não seja campo desta classe e o backend não sobe com um .env real.
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore"
     )
 
     @property
@@ -95,7 +113,9 @@ class Settings(BaseSettings):
     @property
     def async_database_url(self) -> str:
         """URL assíncrona (asyncpg) — usada pela aplicação."""
-        return self.sync_database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self.sync_database_url.replace(
+            "postgresql://", "postgresql+asyncpg://", 1
+        )
 
     @model_validator(mode="after")
     def _validate_secret_in_production(self) -> "Settings":

@@ -12,7 +12,7 @@ from schemas.interesse import InteresseResponse
 from schemas.offer import OfferResponse
 from schemas.profile import ProfileUpdate
 from services.account.service import AccountService
-from services.model_client import ModelServiceClient
+from services.bandit.client import BanditClient
 from settings import settings
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ class OfferService:
     (`POST /onboarding`). O estado do modelo vive no model_service; aqui só orquestramos.
     """
 
-    def __init__(self, uow: UnitOfWork, model_client: ModelServiceClient):
+    def __init__(self, uow: UnitOfWork, model_client: BanditClient):
         self.uow = uow
         self.model_client = model_client
 

@@ -28,10 +28,10 @@ from schemas.decisao import (
 from services.account.service import AccountService
 from services.decision.service import DecisionService
 from services.demo.service import OnboardingService
-from services.model_client import ModelServiceClient
+from services.bandit.client import BanditClient
 
 router = APIRouter(prefix="/me", tags=["account"])
-model_client = ModelServiceClient()
+model_client = BanditClient()
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 

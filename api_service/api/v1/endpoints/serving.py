@@ -20,10 +20,10 @@ from schemas.decisao import (
     ShowcaseResponse,
 )
 from services.decision.service import DecisionService
-from services.model_client import ModelServiceClient
+from services.bandit.client import BanditClient
 
 router = APIRouter(tags=["serving"])
-model_client = ModelServiceClient()
+model_client = BanditClient()
 
 
 @router.post("/decide", response_model=DecideResponse)

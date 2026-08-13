@@ -16,7 +16,10 @@ auth = AuthDependencies()
 
 
 @router.post(
-    "/register", tags=["auth"], response_model=UserResponse, response_model_exclude_none=True
+    "/register",
+    tags=["auth"],
+    response_model=UserResponse,
+    response_model_exclude_none=True,
 )
 async def register_user(
     user: UserCreate,
@@ -31,7 +34,10 @@ async def register_user(
 
 
 @router.post(
-    "/login", tags=["auth"], response_model=TokenResponse, response_model_exclude_none=True
+    "/login",
+    tags=["auth"],
+    response_model=TokenResponse,
+    response_model_exclude_none=True,
 )
 async def login_user(user: UserLogin, uow: UnitOfWork = Depends(get_uow)):
     jwt = JwtToken()
@@ -42,6 +48,8 @@ async def login_user(user: UserLogin, uow: UnitOfWork = Depends(get_uow)):
     return result
 
 
-@router.get("/me", tags=["auth"], response_model=UserResponse, response_model_exclude_none=True)
+@router.get(
+    "/me", tags=["auth"], response_model=UserResponse, response_model_exclude_none=True
+)
 async def me(current_user=Depends(auth.get_current_user)):
     return current_user

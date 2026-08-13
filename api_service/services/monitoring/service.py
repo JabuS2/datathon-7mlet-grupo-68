@@ -16,7 +16,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 
 from db.unit_of_work import UnitOfWork
-from services.model_client import ModelServiceClient
+from services.bandit.client import BanditClient
 from services.monitoring.metrics import Metric, build_metrics
 
 logger = logging.getLogger(__name__)
@@ -37,9 +37,9 @@ def _utc_naive() -> datetime:
 
 
 class MonitoringService:
-    def __init__(self, uow: UnitOfWork, model_client: ModelServiceClient | None = None):
+    def __init__(self, uow: UnitOfWork, model_client: BanditClient | None = None):
         self.uow = uow
-        self.model_client = model_client or ModelServiceClient()
+        self.model_client = model_client or BanditClient()
 
     async def compute(
         self, policy_version: str | None = None, window_days: int = DEFAULT_WINDOW_DAYS
