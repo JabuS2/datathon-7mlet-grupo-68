@@ -1,7 +1,7 @@
-  # ── Usage ─────────────────────────────────────────────────
-  # Infra only (run API locally):  docker-compose up -d
-  # Infra + API in Docker:         docker-compose --profile api up -d
-  # ──────────────────────────────────────────────────────────
+# ── Usage ─────────────────────────────────────────────────
+# Infra only (run API locally):  docker-compose up -d
+# Infra + API in Docker:         docker-compose --profile api up -d
+# ──────────────────────────────────────────────────────────
 
 name: datathon-7mlet-grupo-68
 
@@ -229,7 +229,6 @@ services:
       timeout: 5s
       retries: 5
 
-
   # ── MLflow Tracking + Model Registry ───────────────────────
   mlflow:
     image: ghcr.io/mlflow/mlflow:v2.12.1
@@ -269,6 +268,7 @@ services:
       # APM (traces do ddtrace nas apps)
       DD_APM_ENABLED: "true"
       DD_APM_NON_LOCAL_TRAFFIC: "true"
+      DD_CONTAINER_EXCLUDE_LOGS: "name:dd-agent name:portainer name:postgres name:ryuk name:redis redis"
     volumes:
       # Coleta de logs de containers precisa apenas do socket do Docker —
       # funciona no Docker Desktop (Windows/Mac) e em host Linux.
@@ -280,8 +280,7 @@ services:
     networks:
       - backend
     ports:
-      - "8126:8126"   # APM trace intake
-
+      - "8126:8126" # APM trace intake
 
 # ------------------------------------------------------------
 # SERVIÇOS DESATIVADOS (habilitar depois quando necessário)
@@ -302,7 +301,6 @@ services:
 #      - backend
 #    ports:
 #      - "8501:8501"
-
 
 volumes:
   postgres_data:

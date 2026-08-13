@@ -1,10 +1,11 @@
 import logging
 
-from api.v1.routes import router
-from exceptions import AppException
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+from api.v1.routes import router
+from exceptions import AppException
 from logging_config import configure_logging
 from settings import settings
 

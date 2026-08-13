@@ -26,9 +26,9 @@ from schemas.decisao import (
     ShowcaseResponse,
 )
 from services.account.service import AccountService
+from services.bandit.client import BanditClient
 from services.decision.service import DecisionService
 from services.demo.service import OnboardingService
-from services.bandit.client import BanditClient
 
 router = APIRouter(prefix="/me", tags=["account"])
 model_client = BanditClient()
@@ -87,15 +87,23 @@ async def my_decision(
 
 
 @router.post("/feedback", response_model=FeedbackResponse)
-async def my_feedback(body: FeedbackRequest, user: CurrentUser, uow: UnitOfWork = Depends(get_uow)):
+async def my_feedback(
+    body: FeedbackRequest, user: CurrentUser, uow: UnitOfWork = Depends(get_uow)
+):
     await AccountService(uow).ensure_owns_decision(user, body.decision_id)
-    return await DecisionService(uow, model_client).feedback(body.decision_id, body.type)
+    return await DecisionService(uow, model_client).feedback(
+        body.decision_id, body.type
+    )
 
 
 @router.post("/reward", response_model=RewardResponse)
-async def my_reward(body: RewardRequest, user: CurrentUser, uow: UnitOfWork = Depends(get_uow)):
+async def my_reward(
+    body: RewardRequest, user: CurrentUser, uow: UnitOfWork = Depends(get_uow)
+):
     await AccountService(uow).ensure_owns_decision(user, body.decision_id)
-    return await DecisionService(uow, model_client).reward(body.decision_id, body.converted)
+    return await DecisionService(uow, model_client).reward(
+        body.decision_id, body.converted
+    )
 
 
 @router.get("/decisions", response_model=list[DecisaoResponse])
