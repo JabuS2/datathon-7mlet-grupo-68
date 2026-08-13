@@ -1,0 +1,26 @@
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    POETRY_VIRTUALENVS_CREATE=false
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir poetry
+
+COPY model_service/pyproject.toml model_service/poetry.lock* ./
+
+RUN poetry install --no-interaction --no-ansi
+
+COPY model_service/ .
+
+COPY infra/docker/entrypoint.model.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+EXPOSE 8000
+
+# O entrypoint espera o Postgres (banco de governança), aplica as migrações e sobe o
+# uvicorn sob ddtrace-run. Sem DD_TRACE_ENABLED=true (default do compose é false) o
+# ddtrace não tenta conectar ao agent.
+ENTRYPOINT ["/app/entrypoint.sh"]
